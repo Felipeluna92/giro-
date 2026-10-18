@@ -5,5 +5,6 @@
 - Estrutura relacional aplicada: perfil, estabelecimentos, entregas e lançamentos financeiros.
 - RLS habilitada nas quatro tabelas. APIs de leitura e gravação restritas a usuários autenticados.
 - Testes no banco aprovados: leitura/gravação, revisão concorrente, reversão atômica, isolamento e relações entre usuários. Registros de teste revertidos.
-- Configuração de variáveis na Vercel e URLs de autenticação ainda pendente de verificação.
-- Login e gravação pelo domínio final ainda precisam de teste após configurar o ambiente.
+- Aplicativo publicado em `https://giro-beryl.vercel.app`; página de entrada e bloqueio da API sem sessão verificados.
+- Leitura por IA integrada ao AI Gateway; nova revisão inclui ampliações de comandas longas, validação de campos e erros explícitos.
+- A execução do modelo em uma sessão autenticada de produção ainda precisa de validação. A consulta aos logs retornou 403 em 18/10/2026; não há evidência para declarar o teste completo aprovado.

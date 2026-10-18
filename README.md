@@ -4,7 +4,9 @@ Aplicativo independente para motoboys, preparado para **Next.js na Vercel** e **
 
 ## Recursos
 
-- Comandas por foto, com OCR local em português e conferência dos campos.
+- Comandas impressas e manuscritas por visão multimodal, com ampliações de fotos longas e conferência dos campos.
+- Validação de telefone, separação de taxa de entrega/serviço e aviso quando os valores não fecham com o total escrito.
+- Repetição de leitura na mesma foto e leitor local de texto impresso como alternativa explícita.
 - Cadastro, edição, cancelamento, conclusão e reabertura de entregas.
 - Ganho integral, fixo ou percentual por estabelecimento.
 - Navegação, telefone e WhatsApp do cliente.
@@ -38,11 +40,20 @@ As tabelas `rider_accounts`, `establishments`, `deliveries` e `financial_entries
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://rsucosyomvbpxezhllik.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | A Publishable key desse projeto no Supabase |
 | `NEXT_PUBLIC_SITE_URL` | URL final do Giro, para referência na configuração de redirecionamentos |
+| `AI_GATEWAY_MODEL` | ID de modelo com entrada de imagem e saída estruturada, disponível no AI Gateway |
 
 4. Publique e finalize a configuração dos URLs no Supabase.
 5. Teste cadastro, confirmação de e-mail, login, gravação de entrega, recarga da página e saída.
 
 Não coloque senhas ou chaves administrativas no GitHub. `.env.local` e `.vercel` são ignorados pelo Git.
+
+## Leitura de comandas
+
+A rota autenticada `POST /api/ocr` utiliza AI Gateway com o OIDC da Vercel. Para desenvolvimento fora da Vercel, configure `AI_GATEWAY_API_KEY` em um ambiente privado; nunca use uma variável `NEXT_PUBLIC_` para essa chave. O acesso ao Gateway e os créditos precisam estar disponíveis na conta.
+
+A foto completa é acompanhada por dois recortes sobrepostos quando o papel é longo, em uma única solicitação ao modelo. Campos críticos marcados como ambíguos ficam vazios para conferência. O total escrito é preservado mesmo quando há divergência aritmética, com aviso ao usuário. Pagamento ausente exige escolha antes de salvar. A foto e a transcrição não são gravadas no histórico do Giro; somente os campos confirmados são salvos. Logs do aplicativo registram códigos de resultado, sem dados do cliente ou conteúdo da foto.
+
+Erros de configuração, limite, timeout e indisponibilidade ficam visíveis. O aplicativo não troca automaticamente uma falha da IA por um OCR local apresentado como sucesso. A alternativa local é indicada para texto impresso e precisa ser escolhida pelo usuário.
 
 ## Desenvolvimento e verificação
 

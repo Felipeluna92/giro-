@@ -57,25 +57,41 @@ async function decodeImage(file: File): Promise<{ source: CanvasImageSource; wid
 
 export async function prepareReceiptForAI(file: File) {
   const decoded = await decodeImage(file);
+  const canvases: HTMLCanvasElement[] = [];
   try {
-    const scale = Math.min(1, 2048 / Math.max(decoded.width, decoded.height));
-    const width = Math.max(1, Math.round(decoded.width * scale));
-    const height = Math.max(1, Math.round(decoded.height * scale));
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Seu navegador não conseguiu preparar a foto.');
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, width, height);
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.drawImage(decoded.source, 0, 0, width, height);
-    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-    if (!blob) throw new Error('Não foi possível preparar a foto para leitura.');
-    return blob;
+    if (decoded.width < 160 || decoded.height < 160) throw new Error('A foto está pequena demais. Use a foto original da câmera.');
+    const render = (sx: number, sy: number, sw: number, sh: number, maxSide: number) => {
+      const scale = Math.min(1, maxSide / Math.max(sw, sh));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(sw * scale));
+      canvas.height = Math.max(1, Math.round(sh * scale));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Seu navegador não conseguiu preparar a foto.');
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(decoded.source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      canvases.push(canvas);
+    };
+    render(0, 0, decoded.width, decoded.height, 2400);
+    // Overlapping details keep small handwriting legible on long receipts.
+    // The complete image remains available to retain context and line order.
+    if (decoded.height / decoded.width >= 1.65 && decoded.height >= 1000) {
+      const cropHeight = Math.round(decoded.height * 0.6);
+      render(0, 0, decoded.width, cropHeight, 1800);
+      render(0, decoded.height - cropHeight, decoded.width, cropHeight, 1800);
+    }
+    const encode = async (quality: number) => Promise.all(canvases.map(canvas => new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Não foi possível preparar a foto.')), 'image/jpeg', quality);
+    })));
+    let blobs = await encode(0.94);
+    if (blobs.reduce((sum, blob) => sum + blob.size, 0) > 3_600_000) blobs = await encode(0.78);
+    if (blobs.reduce((sum, blob) => sum + blob.size, 0) > 3_600_000) throw new Error('A foto ficou muito grande. Enquadre apenas a comanda e tente novamente.');
+    return { overview: blobs[0], details: blobs.slice(1) };
   } finally {
     decoded.close();
+    for (const canvas of canvases) { canvas.width = 0; canvas.height = 0; }
   }
 }
 
