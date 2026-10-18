@@ -55,6 +55,30 @@ async function decodeImage(file: File): Promise<{ source: CanvasImageSource; wid
   return { source: image, width: image.naturalWidth, height: image.naturalHeight, close: () => URL.revokeObjectURL(url) };
 }
 
+export async function prepareReceiptForAI(file: File) {
+  const decoded = await decodeImage(file);
+  try {
+    const scale = Math.min(1, 2048 / Math.max(decoded.width, decoded.height));
+    const width = Math.max(1, Math.round(decoded.width * scale));
+    const height = Math.max(1, Math.round(decoded.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Seu navegador não conseguiu preparar a foto.');
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, width, height);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(decoded.source, 0, 0, width, height);
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+    if (!blob) throw new Error('Não foi possível preparar a foto para leitura.');
+    return blob;
+  } finally {
+    decoded.close();
+  }
+}
+
 function percentile(histogram: Uint32Array, total: number, fraction: number) {
   const target = total * fraction;
   let accumulated = 0;

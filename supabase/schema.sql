@@ -159,3 +159,33 @@ revoke all on function public.get_rider_workspace() from public,anon;
 revoke all on function public.save_rider_workspace(jsonb,integer) from public,anon;
 grant execute on function public.get_rider_workspace() to authenticated;
 grant execute on function public.save_rider_workspace(jsonb,integer) to authenticated;
+
+-- Daily per-account quota keeps AI image-reading costs predictable.
+create table public.ai_scan_usage (
+ owner_id uuid not null references auth.users(id) on delete cascade,
+ scan_day date not null default (now() at time zone 'America/Sao_Paulo')::date,
+ scans integer not null default 0 check (scans between 0 and 40),
+ updated_at timestamptz not null default now(),
+ primary key(owner_id,scan_day)
+);
+alter table public.ai_scan_usage enable row level security;
+revoke all on public.ai_scan_usage from anon;
+grant select,insert,update on public.ai_scan_usage to authenticated;
+create policy ai_scan_usage_select on public.ai_scan_usage for select to authenticated using ((select auth.uid())=owner_id);
+create policy ai_scan_usage_insert on public.ai_scan_usage for insert to authenticated with check ((select auth.uid())=owner_id);
+create policy ai_scan_usage_update on public.ai_scan_usage for update to authenticated using ((select auth.uid())=owner_id) with check ((select auth.uid())=owner_id);
+
+create function public.claim_ai_scan() returns boolean language plpgsql security invoker set search_path='' as $$
+declare v_uid uuid:=auth.uid(); v_claimed integer;
+begin
+ if v_uid is null then raise insufficient_privilege using message='Authentication required'; end if;
+ insert into public.ai_scan_usage(owner_id,scan_day,scans)
+ values(v_uid,(now() at time zone 'America/Sao_Paulo')::date,1)
+ on conflict(owner_id,scan_day) do update set scans=public.ai_scan_usage.scans+1,updated_at=now()
+ where public.ai_scan_usage.scans<40
+ returning scans into v_claimed;
+ return v_claimed is not null;
+end;
+$$;
+revoke all on function public.claim_ai_scan() from public,anon;
+grant execute on function public.claim_ai_scan() to authenticated;
