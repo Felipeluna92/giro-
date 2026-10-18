@@ -5,9 +5,9 @@ export const dynamic='force-dynamic';
 const respond=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 export async function GET(){
  const user=await getRiderUser();if(!user)return respond({error:'Entre na sua conta para continuar.'},401);
- const supabase=await createClient();const {data,error}=await supabase.from('rider_workspaces').select('data,revision').eq('owner',user.userId).maybeSingle();
+ const supabase=await createClient();const {data,error}=await supabase.rpc('get_rider_workspace');
  if(error){console.error('workspace_read_failed',{code:error.code});return respond({error:'Não foi possível carregar seus dados. Verifique a configuração do banco ou tente novamente.'},503);}
- const checked=data?stateSchema.safeParse(data.data):null;
+ const checked=data?stateSchema.safeParse(data.state):null;
  if(checked&&!checked.success)return respond({error:'O histórico precisa de revisão. Entre em contato com o suporte antes de substituir seus dados.'},422);
  return respond({state:checked?.success?checked.data:emptyState(),revision:data?.revision??0});
 }

@@ -17,7 +17,7 @@ Aplicativo independente para motoboys, preparado para **Next.js na Vercel** e **
 
 O projeto exclusivo do Giro já foi criado na região São Paulo: `rsucosyomvbpxezhllik`.
 
-1. No SQL Editor desse projeto, execute **uma vez** o arquivo `supabase/schema.sql`. Ele cria a tabela, as políticas de acesso por usuário e a função de salvamento com controle de concorrência. Não execute no banco do Reposita.
+1. A estrutura do banco **já foi aplicada** no projeto exclusivo do Giro. `supabase/schema.sql` é a referência para recriar um ambiente vazio; não execute novamente no banco existente. As quatro tabelas, as políticas e as funções estão descritas em `docs/database.md`.
 2. Em **Settings → API Keys**, obtenha a **Publishable key**. O aplicativo não precisa de chave secret ou service role.
 3. Em **Authentication → URL Configuration**, configure a **Site URL** com a URL final da Vercel e inclua `https://SEU-DOMINIO/auth/callback` e `https://SEU-DOMINIO/auth/callback?next=/redefinir-senha` entre os redirecionamentos permitidos.
 4. Mantenha a confirmação de e-mail habilitada. O cadastro usa PKCE; abra o e-mail no mesmo navegador em que começou o cadastro. Se o link expirar ou for aberto em outro aparelho, solicite um novo e-mail ou entre com sua senha após confirmar a conta.
@@ -25,7 +25,7 @@ O projeto exclusivo do Giro já foi criado na região São Paulo: `rsucosyomvbpx
 
 ### Dados protegidos
 
-A tabela utiliza RLS: cada usuário acessa apenas a linha associada ao próprio `auth.uid()`. As APIs validam a identidade no servidor, validam o conteúdo e usam uma função `SECURITY INVOKER`, sem ignorar as políticas de acesso. Não há chave administrativa no código ou no navegador.
+As tabelas `rider_accounts`, `establishments`, `deliveries` e `financial_entries` utilizam RLS. Cada usuário acessa apenas registros associados ao próprio `auth.uid()`. As relações impedem vincular uma entrega ou um lançamento ao estabelecimento de outro usuário. As APIs validam a identidade e o conteúdo no servidor e usam funções `SECURITY INVOKER`, sem ignorar as políticas. Não há chave administrativa no código ou no navegador.
 
 ## Importação na Vercel
 
@@ -57,7 +57,7 @@ npm run build
 npm run dev
 ```
 
-As variáveis em `.env.local` devem usar o projeto correto. A configuração do banco precisa ser concluída antes de testar gravações.
+As variáveis em `.env.local` devem usar o projeto correto. O banco do projeto Giro já está estruturado; confirme os valores do ambiente antes de testar gravações. Os testes SQL em `supabase/verify.sql` verificam persistência, concorrência e isolamento em uma transação revertida.
 
 ## Limites desta primeira versão
 
