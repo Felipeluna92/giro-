@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {accountAccess} from '../lib/access.ts';
 import {subscriptionEvents,kirvanoDate} from '../lib/kirvano.ts';
+import {usernameSchema,managedCreateSchema} from '../lib/managed-rider.ts';
 const now=Date.parse('2026-10-19T12:00:00Z');
 const plans=[{portal:'rider',productId:'giro-rider',offerId:'monthly-rider'},{portal:'merchant',productId:'giro-merchant',offerId:'monthly-merchant'}];
 const paid={event:'SALE_APPROVED',sale_id:'TEST-SALE',type:'RECURRING',status:'APPROVED',created_at:'2026-10-19 09:00:00',customer:{email:'Rider@example.invalid'},plan:{next_charge_date:'2026-11-19 09:00:00'},products:[{id:'giro-rider',offer_id:'monthly-rider'}]};
@@ -29,7 +30,21 @@ test('Dates follow the Brazilian examples and reject impossible dates',()=>{
  assert.equal(kirvanoDate('2026-10-19 25:00:00'),null);
 });
 test('Authorization fails closed and never treats strings or metadata-like objects as admin flags',()=>{
- assert.deepEqual(accountAccess(null),{isAdmin:false,rider:false,merchant:false});
- assert.deepEqual(accountAccess({isAdmin:'true',rider:1,merchant:'yes',user_metadata:{role:'admin'}}),{isAdmin:false,rider:false,merchant:false});
- assert.deepEqual(accountAccess({isAdmin:false,rider:true,merchant:false}),{isAdmin:false,rider:true,merchant:false});
+ assert.deepEqual(accountAccess(null),{isAdmin:false,rider:false,merchant:false,combo:false,managedRider:false,comboIntroUsed:false});
+ assert.deepEqual(accountAccess({isAdmin:'true',rider:1,merchant:'yes',user_metadata:{role:'admin'}}),{isAdmin:false,rider:false,merchant:false,combo:false,managedRider:false,comboIntroUsed:false});
+ assert.deepEqual(accountAccess({isAdmin:false,rider:true,merchant:false}),{isAdmin:false,rider:true,merchant:false,combo:false,managedRider:false,comboIntroUsed:false});
+});
+test('The package recognizes both its introductory recurring offer and its full-price recurring offer',()=>{
+ const combo=[{portal:'combo',productId:'giro-combo',offerId:'combo-intro',renewalOfferId:'combo-normal'}];
+ for(const offer of ['combo-intro','combo-normal']){
+  const events=subscriptionEvents({...paid,products:[{id:'giro-combo',offer_id:offer}]},combo,now);
+  assert.equal(events.length,1);assert.equal(events[0].portal,'combo');
+ }
+ assert.deepEqual(subscriptionEvents({...paid,products:[{id:'giro-combo',offer_id:'unrelated'}]},combo,now),[]);
+});
+test('Managed rider usernames normalize case, reject unsafe identifiers and require a real password',()=>{
+ assert.equal(usernameSchema.parse('  Joao.Entrega_1  '),'joao.entrega_1');
+ for(const value of ['ab','joao teste','joao@example.com','<script>','a'.repeat(33)])assert.equal(usernameSchema.safeParse(value).success,false);
+ assert.equal(managedCreateSchema.safeParse({action:'create',name:'João',username:'joao.entregas',password:'123'}).success,false);
+ assert.equal(managedCreateSchema.safeParse({action:'create',name:'João',username:'joao.entregas',password:'SenhaDeTeste123!'}).success,true);
 });

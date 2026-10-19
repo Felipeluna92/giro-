@@ -6,8 +6,8 @@ const payloadSchema=z.object({
  plan:z.object({next_charge_date:z.string().optional()}).optional(),
  products:z.array(z.object({id:z.string().max(100),offer_id:z.string().max(100).optional()})).max(30).optional()
 });
-export type WebhookPlan={portal:'rider'|'merchant';productId:string;offerId:string};
-export type SubscriptionEvent={sale:string;portal:'rider'|'merchant';email:string;event:string;occurred:string;until:string|null};
+export type WebhookPlan={portal:'rider'|'merchant'|'combo';productId:string;offerId:string;renewalOfferId?:string};
+export type SubscriptionEvent={sale:string;portal:'rider'|'merchant'|'combo';email:string;event:string;occurred:string;until:string|null};
 export function kirvanoDate(value:string|undefined):string|null{
  if(!value)return null;
  const match=value.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|[+-]\d{2}:\d{2})?$/);
@@ -23,7 +23,7 @@ export function subscriptionEvents(raw:unknown,plans:WebhookPlan[],now=Date.now(
  const grants=['SALE_APPROVED','SUBSCRIPTION_RENEWED'];
  if(![...grants,'SUBSCRIPTION_CANCELED','SUBSCRIPTION_EXPIRED','SALE_REFUNDED','SALE_CHARGEBACK'].includes(p.event))return [];
  if(!p.sale_id||!p.customer||!p.products)throw new Error('Missing sale data');
- const matched=plans.filter(plan=>p.products!.some(product=>product.id===plan.productId&&product.offer_id===plan.offerId));
+ const matched=plans.filter(plan=>p.products!.some(product=>product.id===plan.productId&&(product.offer_id===plan.offerId||(!!plan.renewalOfferId&&product.offer_id===plan.renewalOfferId))));
  if(!matched.length)return [];
  const occurred=kirvanoDate(p.created_at);
  if(!occurred||Date.parse(occurred)>now+600000)throw new Error('Invalid event time');

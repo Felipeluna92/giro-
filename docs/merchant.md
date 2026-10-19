@@ -9,6 +9,8 @@ O login oferece “Sou motoboy” e “Sou comerciante”. A escolha define o de
 3. Ele cola o código, escolhe o estabelecimento e confirma o compartilhamento de entregas e acertos desse local, incluindo o histórico.
 4. Cada código pode ser usado uma vez, por até sete dias. Outros motoboys precisam de novos códigos. Ambos podem desfazer o vínculo.
 
+Esse vínculo é opcional. O motoboy usa o Giro sozinho, inclusive com entregas avulsas, e pode apresentar o plano ao comércio onde trabalha. O pacote promocional inclui uma conta separada de motoboy criada pelo comerciante com usuário e senha; o cadastro não conecta lojas nem ativa compartilhamento automaticamente.
+
 Um estabelecimento do motoboy só pode estar ligado a um comerciante ativo por vez. O comerciante não altera ganhos, comandas ou lançamentos pessoais do motoboy. O vínculo é protegido por RLS, com validação do convite e do estabelecimento pertencente ao motoboy. As funções usam `SECURITY INVOKER`, sem chave administrativa e sem confiar em metadados editáveis do usuário.
 
 A conta administradora pode usar os dois perfis e vincular seu próprio estabelecimento sem cobrança. Para as demais contas, cada painel exige a assinatura correspondente; uma conta com os dois planos pode usar ambos. Com contas distintas, cada motoboy continua vendo seus dados e o comerciante recebe somente o acesso autorizado. Códigos aceitam letras maiúsculas e espaços de cópia; códigos inexistentes, vencidos e já usados geram mensagens específicas, sem tratar falhas do servidor como código inválido. Veja [planos e cobrança](billing.md).

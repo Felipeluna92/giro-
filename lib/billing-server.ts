@@ -10,9 +10,9 @@ export function billingClient(){
  return createSupabaseClient(supabaseConfig().url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
 }
 export async function getPublicPlans():Promise<PublicPlan[]>{
- const fallback:PublicPlan[]=[{portal:'rider',priceCents:2990,available:false},{portal:'merchant',priceCents:null,available:false}];
+ const fallback:PublicPlan[]=[{portal:'rider',priceCents:2990,available:false},{portal:'merchant',priceCents:5990,available:false},{portal:'combo',priceCents:8980,firstPriceCents:3990,available:false}];
  if(!isSupabaseConfigured())return fallback;
  const {data,error}=await (await createClient()).rpc('get_giro_plans');
  if(error||!Array.isArray(data)){console.error('giro_plans_unavailable',{code:error?.code});return fallback;}
- return data.filter((p:PublicPlan)=>p.portal==='rider'||p.portal==='merchant');
+ return data.filter((p:PublicPlan)=>p.portal==='rider'||p.portal==='merchant'||p.portal==='combo');
 }

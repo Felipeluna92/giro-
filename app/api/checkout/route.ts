@@ -7,7 +7,8 @@ export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return portalResponse({error:'Origem inválida.'},403);
  if(!user.emailConfirmed)return portalResponse({error:'Confirme seu e-mail antes de assinar.'},403);
  const body=await portalBody(request),requested:unknown=body?.plan;
- if(requested!=='rider'&&requested!=='merchant')return portalResponse({error:'Plano inválido.'},400);
+ if(requested!=='rider'&&requested!=='merchant'&&requested!=='combo')return portalResponse({error:'Plano inválido.'},400);
+ if(user.access.managedRider)return portalResponse({error:'Seu acesso é gerenciado pelo comerciante do pacote. Peça a ele para conferir a assinatura.'},403);
  const plan=requested;
  if(user.access[plan])return portalResponse({url:portalPath(plan)});
  const {data,error}=await (await createClient()).rpc('get_giro_checkout',{p_portal:plan});

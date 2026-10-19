@@ -2,7 +2,7 @@
 
 O proprietário usa `/admin` para abrir os dois painéis e configurar as vendas. Somente contas registradas em `giro_private.administrators` têm isenção. A atribuição é pelo UUID do usuário confirmado, feita no banco; e-mail em código de cliente, cookie, `user_metadata`, escolha de perfil e página de obrigado não concedem acesso.
 
-Os demais usuários precisam de assinatura vigente do painel correspondente. O plano Motoboy começa em R$ 29,90/mês. O Comerciante fica sem preço e sem venda aberta até o administrador definir a oferta. Uma conta pode adquirir ambos; apenas a administração tem os dois sem pagamento.
+Os demais usuários precisam de assinatura vigente do painel correspondente: Motoboy por R$ 29,90/mês e Comerciante por R$ 59,90/mês. O pacote inclui 1 comerciante e 1 motoboy em contas separadas, por R$ 39,90 no primeiro mês e R$ 89,80/mês depois. Somente a administração tem os dois painéis sem pagamento.
 
 ## Página de vendas
 
@@ -37,6 +37,24 @@ Todas as funções novas são `SECURITY INVOKER`, com `search_path=''` e concess
 
 `npm run typecheck`, `npm test` e `npm run build` verificam aplicação e regras de interpretação. Os testes SQL executam com papéis reais e fixtures revertidas: `verify-billing.sql` cobre isenção, plano correto, usuário sem pagamento, assinatura expirada, e-mail não confirmado, impedimento de autopromoção, funções exclusivas do servidor, repetição, cancelamento e estorno. `verify-merchant.sql`, `verify-invites.sql` e `verify.sql` preservam as verificações de dados e isolamento anteriores.
 
-Para instalação vazia, execute `schema.sql`, `merchant.sql`, `billing.sql` e atribua a conta do proprietário no banco antes do login. Em produção, use migrações; não reaplique os arquivos completos.
+Para instalação vazia, execute `schema.sql`, `merchant.sql`, `billing.sql`, `combo.sql` e atribua a conta do proprietário no banco antes do login. Em produção, use migrações; não reaplique os arquivos completos.
+
+## Pacote e entrada por usuário
+
+Cadastre na Kirvano uma assinatura mensal do pacote com primeira cobrança de R$ 39,90 e cobranças seguintes de R$ 89,80. A Kirvano documenta a opção de preço diferente na primeira cobrança. Cadastre também uma oferta do mesmo produto a R$ 89,80 desde o início, usada para novas compras de contas que já utilizaram a promoção. Preencha os dois links e IDs de oferta no administrador. O endpoint aceita as duas ofertas configuradas; a cobrança efetiva e sua periodicidade dependem das configurações da Kirvano, que precisam de teste real antes de abrir vendas.
+
+Configure a página de obrigado como `/assinar?plano=combo`. Somente o pagamento confirmado libera o pacote; a URL não concede acesso. Depois da confirmação, essa página encaminha o comerciante a `/comerciante/equipe`. A assinatura libera o painel do comprador como comerciante e uma vaga separada de motoboy, não o painel de motoboy na conta do comprador.
+
+O comerciante escolhe nome, usuário e senha inicial do motoboy. A API valida o pacote, reserva uma vaga com bloqueio de concorrência e cria a identidade pela API administrativa do Supabase Auth, sem enviar convite por e-mail. O Auth guarda a senha protegida; o aplicativo não registra senha em tabela, logs ou respostas. Um endereço técnico aleatório fica apenas no backend para o mecanismo de autenticação. O motoboy digita usuário e senha, e o servidor resolve o usuário sem expor um diretório público de contas. Há limites persistentes de tentativas por usuário e IP e mensagem genérica de falha. A senha pode ser redefinida pelo comerciante que criou aquela conta.
+
+Os limites do pacote são uma vaga e um usuário globalmente único. Reservas pendentes têm prazo e podem ser retomadas sem criar novos acessos. A conclusão é idempotente. O acesso da vaga acompanha a validade do pacote no banco, inclusive bloqueio por expiração ou estorno, sem depender de renovar o JWT. A conta do motoboy não tem acesso ao faturamento ou painel do comerciante.
+
+## Motoboy independente
+
+O plano Motoboy não exige loja vinculada nem comerciante assinante. A opção **Entrega avulsa — sem loja** permite registrar a primeira entrega sem cadastrar um comércio. Internamente as entregas ficam no agrupamento pessoal Entregas avulsas para preservar o cálculo financeiro existente.
+
+Criar o usuário incluído no pacote também não vincula loja e não compartilha entregas ou GPS automaticamente. O motoboy pode apresentar o Giro ao comércio onde trabalha e, se quiser compartilhar, aceitar o código com o estabelecimento escolhido. O GPS continua com ativação separada. O vínculo opcional autoriza somente os dados desse local; o financiamento do acesso por um comerciante não cria leitura automática das entregas.
+
+`verify-combo.sql` verifica vaga única, concorrência, nomes de usuário, APIs exclusivas do backend, independência sem loja, vínculo opcional, isolamento dos dois perfis, bloqueio de tentativas, escolha da oferta normal após uso da promoção e estorno dos dois acessos. A identidade Auth nesses testes é uma fixture SQL sem senha ou sessão; o teste não simula uma cobrança real nem uma sessão de login real do provedor.
 
 Referências do contrato consultado: [configurar webhook](https://help.kirvano.com/hc/central-de-ajuda/articles/1765385505-configurando-integracao-via-webhook) e [eventos de assinatura](https://help.kirvano.com/hc/central-de-ajuda/articles/1775656489-ex).
