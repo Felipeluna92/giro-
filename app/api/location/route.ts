@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { portalSession,portalResponse,portalBody } from '../../../lib/portal-api';
 const locationSchema=z.object({linkId:z.string().uuid(),sessionId:z.string().uuid(),lat:z.number().finite().min(-90).max(90),lon:z.number().finite().min(-180).max(180),accuracy:z.number().finite().min(0).max(50000),capturedAt:z.string().datetime()});
 export async function POST(request:Request){
- const session=await portalSession(request);if(session.error)return session.error;
+ const session=await portalSession(request,'rider');if(session.error)return session.error;
  const body=await portalBody(request);
  if(body?.action==='start'){
   const link=z.string().uuid().safeParse(body.linkId);if(!link.success)return portalResponse({error:'Vínculo inválido.'},400);

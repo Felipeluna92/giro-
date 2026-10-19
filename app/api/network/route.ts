@@ -6,13 +6,13 @@ const actionSchema=z.discriminatedUnion('action',[
  z.object({action:z.literal('disconnect'),linkId:z.string().uuid()})
 ]);
 export async function GET(request:Request){
- const session=await portalSession(request);if(session.error)return session.error;
+ const session=await portalSession(request,'rider');if(session.error)return session.error;
  const {data,error}=await session.supabase.rpc('rider_network');
  if(error)return portalResponse({error:'Não foi possível carregar os vínculos.'},503);
  return portalResponse({links:data});
 }
 export async function POST(request:Request){
- const session=await portalSession(request);if(session.error)return session.error;
+ const session=await portalSession(request,'rider');if(session.error)return session.error;
  const parsed=actionSchema.safeParse(await portalBody(request));
  if(!parsed.success)return portalResponse({error:'Confira o código, o estabelecimento e a confirmação de compartilhamento.'},400);
  const action=parsed.data;

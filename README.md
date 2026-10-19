@@ -83,4 +83,4 @@ A prioridade é uma marcação para decisão manual. O cálculo das rotas minimi
 
 O financeiro considera o dia de conclusão no fuso `America/Sao_Paulo`. Acertos por estabelecimento acumulam todos os dias; o fechamento diário inclui somente os registros da data selecionada. O dinheiro recebido por pedidos não é somado como ganho pessoal.
 
-A demonstração é claramente identificada, funciona apenas em memória e não altera registros reais. Esta versão ainda não inclui assinaturas, cobrança ou painel de distribuição de entregas para restaurantes.
+A demonstração é claramente identificada, funciona apenas em memória e não altera registros reais. O Giro inclui página de vendas interativa, planos separados por painel, isenção administrativa e integração de assinaturas com a Kirvano. A abertura de vendas depende de configurar e testar as ofertas no provedor; veja [planos e cobrança](docs/billing.md). O comerciante acompanha entregas vinculadas; esta versão ainda não distribui pedidos para a equipe.

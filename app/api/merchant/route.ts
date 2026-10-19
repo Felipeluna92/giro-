@@ -8,7 +8,7 @@ const actionSchema=z.discriminatedUnion('action',[
  z.object({action:z.literal('disconnect'),linkId:z.string().uuid()})
 ]);
 export async function GET(request:Request){
- const session=await portalSession(request);if(session.error)return session.error;
+ const session=await portalSession(request,'merchant');if(session.error)return session.error;
  const day=new URL(request.url).searchParams.get('day')||dayKey();
  if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day)))return portalResponse({error:'Data inválida.'},400);
  const {data,error}=await session.supabase.rpc('merchant_dashboard',{p_day:day});
@@ -16,7 +16,7 @@ export async function GET(request:Request){
  return portalResponse(data);
 }
 export async function POST(request:Request){
- const session=await portalSession(request);if(session.error)return session.error;
+ const session=await portalSession(request,'merchant');if(session.error)return session.error;
  const checked=actionSchema.safeParse(await portalBody(request));
  if(!checked.success)return portalResponse({error:'Confira os dados informados.'},400);
  const action=checked.data;

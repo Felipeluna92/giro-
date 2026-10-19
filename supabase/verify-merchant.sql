@@ -12,6 +12,7 @@ insert into public.financial_entries(id,owner_id,establishment_id,work_day,kind,
 select gen_random_uuid(),r1,p1,current_date,'payout',300,'Payment' from merchant_fixture
 union all select gen_random_uuid(),r1,p1,current_date,'remittance',1000,'Cash returned' from merchant_fixture
 union all select gen_random_uuid(),r1,p1,current_date,'expense',500,'Private fuel expense' from merchant_fixture;
+insert into giro_private.administrators(user_id) select u from merchant_fixture cross join lateral unnest(array[m1,m2,r1,r2]) u;
 grant select on merchant_fixture to authenticated;
 set local role authenticated;
 do $test$

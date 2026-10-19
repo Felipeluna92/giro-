@@ -11,7 +11,7 @@ O login oferece “Sou motoboy” e “Sou comerciante”. A escolha define o de
 
 Um estabelecimento do motoboy só pode estar ligado a um comerciante ativo por vez. O comerciante não altera ganhos, comandas ou lançamentos pessoais do motoboy. O vínculo é protegido por RLS, com validação do convite e do estabelecimento pertencente ao motoboy. As funções usam `SECURITY INVOKER`, sem chave administrativa e sem confiar em metadados editáveis do usuário.
 
-A mesma conta pode usar os dois perfis e vincular seu próprio estabelecimento. Isso também permite testar o fluxo alternando entre as duas áreas. Com contas distintas, cada motoboy continua vendo seus dados e o comerciante recebe somente o acesso autorizado. Códigos aceitam letras maiúsculas e espaços de cópia; códigos inexistentes, vencidos e já usados geram mensagens específicas, sem tratar falhas do servidor como código inválido.
+A conta administradora pode usar os dois perfis e vincular seu próprio estabelecimento sem cobrança. Para as demais contas, cada painel exige a assinatura correspondente; uma conta com os dois planos pode usar ambos. Com contas distintas, cada motoboy continua vendo seus dados e o comerciante recebe somente o acesso autorizado. Códigos aceitam letras maiúsculas e espaços de cópia; códigos inexistentes, vencidos e já usados geram mensagens específicas, sem tratar falhas do servidor como código inválido. Veja [planos e cobrança](billing.md).
 
 ## Entregas e acertos
 

@@ -5,6 +5,7 @@ export const dynamic='force-dynamic';
 const respond=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 export async function GET(){
  const user=await getRiderUser();if(!user)return respond({error:'Entre na sua conta para continuar.'},401);
+ if(!user.access.rider)return respond({error:'Ative o plano Motoboy para acessar suas entregas.',code:'PLAN_REQUIRED'},402);
  const supabase=await createClient();const {data,error}=await supabase.rpc('get_rider_workspace');
  if(error){console.error('workspace_read_failed',{code:error.code});return respond({error:'Não foi possível carregar seus dados. Verifique a configuração do banco ou tente novamente.'},503);}
  const checked=data?stateSchema.safeParse(data.state):null;
@@ -13,6 +14,7 @@ export async function GET(){
 }
 export async function PUT(request:Request){
  const user=await getRiderUser();if(!user)return respond({error:'Entre na sua conta para continuar.'},401);
+ if(!user.access.rider)return respond({error:'Ative o plano Motoboy para salvar suas entregas.',code:'PLAN_REQUIRED'},402);
  const origin=request.headers.get('Origin');if(origin&&origin!==new URL(request.url).origin)return respond({error:'Origem inválida.'},403);
  const raw=await request.text();if(raw.length>2500000)return respond({error:'Seu histórico atingiu o limite desta versão.'},413);
  let body;try{body=JSON.parse(raw);}catch{return respond({error:'Dados inválidos.'},400);}

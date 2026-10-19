@@ -4,7 +4,8 @@ import { z } from 'zod';
 const point=z.object({lat:z.number().min(-90).max(90),lon:z.number().min(-180).max(180)});
 export const dynamic='force-dynamic';
 export async function POST(req:Request){
- if(!await getRiderUser())return Response.json({error:'Entre para continuar.'},{status:401});
+ const user=await getRiderUser();if(!user)return Response.json({error:'Entre para continuar.'},{status:401});
+ if(!user.access.rider)return Response.json({error:'Ative o plano Motoboy para calcular rotas.',code:'PLAN_REQUIRED'},{status:402});
  try{const input=z.object({origin:point,points:z.array(point).min(1).max(8),optimize:z.boolean()}).safeParse(await req.json());if(!input.success)return Response.json({error:'Selecione de 1 a 8 entregas com localização confirmada.'},{status:400});
  const {origin,points,optimize}=input.data;const coords=[origin,...points].map(p=>`${p.lon},${p.lat}`).join(';');
  let order=points.map((_,i)=>i);

@@ -5,6 +5,7 @@ insert into auth.users(id,aud,role,email) select u,'authenticated','authenticate
 insert into public.establishments(id,owner_id,name,rate_rule,rate_value) select place,dual_user,'Shared place','full',0 from invite_fixture union all select other_place,dual_user,'Private place','full',0 from invite_fixture;
 insert into giro_private.merchants(owner_id,name) select merchant_user,'Other merchant' from invite_fixture;
 insert into giro_private.merchant_invites(token_hash,merchant_id,expires_at) select encode(sha256(convert_to(expired_code,'UTF8')),'hex'),merchant_user,now()-interval '1 second' from invite_fixture;
+insert into giro_private.administrators(user_id) select dual_user from invite_fixture union all select merchant_user from invite_fixture;
 grant select on invite_fixture to authenticated;
 set local role authenticated;
 do $test$

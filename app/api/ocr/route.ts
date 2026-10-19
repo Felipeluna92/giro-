@@ -16,6 +16,7 @@ function imageSignature(bytes: Uint8Array, type: string) {
 export async function POST(request: Request) {
   const rider = await getRiderUser();
   if (!rider) return respond({ error: 'Entre na sua conta para ler a comanda.', code: 'AUTH_REQUIRED' }, 401);
+  if (!rider.access.rider) return respond({error:'Ative o plano Motoboy para ler comandas.',code:'PLAN_REQUIRED'},402);
   const origin = request.headers.get('origin');
   if (origin && origin !== new URL(request.url).origin) return respond({ error: 'Origem inválida.' }, 403);
   const model = process.env.AI_GATEWAY_MODEL;

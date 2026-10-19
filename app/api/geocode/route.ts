@@ -1,7 +1,8 @@
 import { getRiderUser } from '../../../lib/auth';
 export const dynamic='force-dynamic';
 export async function POST(req:Request){
- if(!await getRiderUser())return Response.json({error:'Entre para continuar.'},{status:401});
+ const user=await getRiderUser();if(!user)return Response.json({error:'Entre para continuar.'},{status:401});
+ if(!user.access.rider)return Response.json({error:'Ative o plano Motoboy para consultar endereços.',code:'PLAN_REQUIRED'},{status:402});
  try{const {address,city}=await req.json() as {address:unknown;city:unknown};if(typeof address!=='string'||address.length<5||address.length>400||typeof city!=='string'||city.length>100)return Response.json({error:'Confira o endereço e a cidade.'},{status:400});
  const url=new URL('https://photon.komoot.io/api/');url.searchParams.set('q',`${address}, ${city}, Brasil`);url.searchParams.set('limit','5');url.searchParams.set('bbox','-74,-34,-34,6');
  const r=await fetch(url,{signal:AbortSignal.timeout(15000),headers:{'User-Agent':'GiroMotoboy/1.0 (Giro delivery planner)'}});if(!r.ok)throw new Error('Consulta indisponível');const data=await r.json() as {features:{geometry:{coordinates:[number,number]},properties:Record<string,string>}[]};

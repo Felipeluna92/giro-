@@ -5,6 +5,7 @@ create temporary table giro_test_fixture as select gen_random_uuid() a,gen_rando
 insert into auth.users(id,aud,role,email)
  select a,'authenticated','authenticated',a::text||'@giro-test.invalid' from giro_test_fixture
  union all select b,'authenticated','authenticated',b::text||'@giro-test.invalid' from giro_test_fixture;
+insert into giro_private.administrators(user_id) select a from giro_test_fixture union all select b from giro_test_fixture;
 grant select on giro_test_fixture to authenticated;
 set local role authenticated;
 do $test$
