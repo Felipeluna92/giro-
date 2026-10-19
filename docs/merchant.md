@@ -11,6 +11,8 @@ O login oferece “Sou motoboy” e “Sou comerciante”. A escolha define o de
 
 Um estabelecimento do motoboy só pode estar ligado a um comerciante ativo por vez. O comerciante não altera ganhos, comandas ou lançamentos pessoais do motoboy. O vínculo é protegido por RLS, com validação do convite e do estabelecimento pertencente ao motoboy. As funções usam `SECURITY INVOKER`, sem chave administrativa e sem confiar em metadados editáveis do usuário.
 
+A mesma conta pode usar os dois perfis e vincular seu próprio estabelecimento. Isso também permite testar o fluxo alternando entre as duas áreas. Com contas distintas, cada motoboy continua vendo seus dados e o comerciante recebe somente o acesso autorizado. Códigos aceitam letras maiúsculas e espaços de cópia; códigos inexistentes, vencidos e já usados geram mensagens específicas, sem tratar falhas do servidor como código inválido.
+
 ## Entregas e acertos
 
 O botão **Sair para entrega** registra a saída e muda o status exibido para **Em rota**. Antes disso, a entrega aparece como **Aguardando retirada**. Conclusões e cancelamentos usam o fluxo existente.
@@ -32,5 +34,7 @@ O rastreamento depende de HTTPS, permissão de localização, internet e app abe
 Para um banco vazio, execute primeiro `supabase/schema.sql` e depois `supabase/merchant.sql`. Não reaplique esses arquivos em produção: as alterações já foram aplicadas como migrações. Tabelas de perfis comerciais, convites, vínculos e localização ficam em `giro_private`, fora da Data API exposta. Funções públicas autenticadas oferecem operações específicas e respeitam RLS.
 
 `supabase/verify-merchant.sql` testa dois comerciantes e dois motoboys com dados fictícios em uma transação revertida: isolamento por estabelecimento, convites, proibição de edição de ganhos pelo comércio, saldos, permissões de GPS, envio atrasado, encerramento do turno e revogação. O teste também foi aprovado no projeto real do Giro.
+
+`supabase/verify-invites.sql` verifica o vínculo dos dois perfis na mesma conta, reconexão, espaços e maiúsculas ao copiar, mensagens distintas para códigos inválidos, expirados e usados e preservação do código quando a operação é rejeitada. Os dados fictícios também são revertidos.
 
 O assessor de segurança não apontou novos avisos. Permanece o aviso anterior de [proteção contra senhas vazadas desativada](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).

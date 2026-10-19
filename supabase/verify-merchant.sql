@@ -32,7 +32,7 @@ begin
  perform set_config('request.jwt.claim.sub',f.r1::text,true);
  if public.rider_connect(code,f.p1,'Rider A')<>'Merchant A' then raise exception 'Wrong merchant linked'; end if;
  link1:=(public.rider_network()->0->>'id')::uuid;
- denied:=false;begin perform public.rider_connect(code,f.other_place,'Reuse');exception when invalid_parameter_value then denied:=true;end;
+ denied:=false;begin perform public.rider_connect(code,f.other_place,'Reuse');exception when sqlstate 'GRC03' then denied:=true;end;
  if not denied then raise exception 'Single-use invite reused'; end if;
  denied:=false;begin update giro_private.merchant_links set merchant_id=f.m2 where id=link1;exception when insufficient_privilege then denied:=true;end;
  if not denied then raise exception 'Merchant identity reassignment accepted'; end if;
