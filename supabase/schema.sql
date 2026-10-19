@@ -27,6 +27,7 @@ create table public.deliveries (
  retained_cents integer not null default 0 check (retained_cents between 0 and 100000000),
  tip_cents integer not null default 0 check (tip_cents between 0 and 100000000),
  payment text not null check (payment in ('paid','cash','card','pix')),
+ departed_at timestamptz,
  status text not null default 'pending' check (status in ('pending','delivered','cancelled')),
  work_day date not null, priority boolean not null default false,
  latitude double precision, longitude double precision, location_label varchar(300),
@@ -85,6 +86,7 @@ create function public.get_rider_workspace() returns jsonb language sql stable s
  'id',d.id,'placeId',d.establishment_id,'order',d.order_number,'customer',d.customer_name,'phone',d.phone,'address',d.address,'complement',d.complement,'notes',d.notes,
  'customerFee',d.customer_fee_cents,'earnings',d.earnings_cents,'orderTotal',d.order_total_cents,'cashCollected',d.cash_collected_cents,'retained',d.retained_cents,'tip',d.tip_cents,
  'payment',d.payment,'status',d.status,'day',d.work_day::text,'priority',d.priority,
+ 'departedAt',case when d.departed_at is null then null else to_char(d.departed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') end,
  'createdAt',to_char(d.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
  'completedAt',case when d.completed_at is null then null else to_char(d.completed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') end,
  'point',case when d.latitude is null then null else jsonb_build_object('lat',d.latitude,'lon',d.longitude,'label',d.location_label) end
@@ -126,17 +128,17 @@ begin
  if v_count<>jsonb_array_length(p_data->'places') then raise insufficient_privilege using message='Establishment ownership conflict'; end if;
 
  insert into public.deliveries(id,owner_id,establishment_id,order_number,customer_name,phone,address,complement,notes,
- customer_fee_cents,earnings_cents,order_total_cents,cash_collected_cents,retained_cents,tip_cents,payment,status,work_day,priority,latitude,longitude,location_label,created_at,completed_at)
+ customer_fee_cents,earnings_cents,order_total_cents,cash_collected_cents,retained_cents,tip_cents,payment,status,work_day,priority,latitude,longitude,location_label,created_at,completed_at,departed_at)
  select (x->>'id')::uuid,v_uid,(x->>'placeId')::uuid,x->>'order',x->>'customer',x->>'phone',x->>'address',x->>'complement',x->>'notes',
  (x->>'customerFee')::integer,(x->>'earnings')::integer,(x->>'orderTotal')::integer,(x->>'cashCollected')::integer,(x->>'retained')::integer,(x->>'tip')::integer,
  x->>'payment',x->>'status',(x->>'day')::date,(x->>'priority')::boolean,
- (x->'point'->>'lat')::double precision,(x->'point'->>'lon')::double precision,x->'point'->>'label',(x->>'createdAt')::timestamptz,(x->>'completedAt')::timestamptz
+ (x->'point'->>'lat')::double precision,(x->'point'->>'lon')::double precision,x->'point'->>'label',(x->>'createdAt')::timestamptz,(x->>'completedAt')::timestamptz,(x->>'departedAt')::timestamptz
  from jsonb_array_elements(p_data->'deliveries') x
  on conflict(id) do update set establishment_id=excluded.establishment_id,order_number=excluded.order_number,customer_name=excluded.customer_name,phone=excluded.phone,
  address=excluded.address,complement=excluded.complement,notes=excluded.notes,customer_fee_cents=excluded.customer_fee_cents,earnings_cents=excluded.earnings_cents,
  order_total_cents=excluded.order_total_cents,cash_collected_cents=excluded.cash_collected_cents,retained_cents=excluded.retained_cents,tip_cents=excluded.tip_cents,
  payment=excluded.payment,status=excluded.status,work_day=excluded.work_day,priority=excluded.priority,latitude=excluded.latitude,longitude=excluded.longitude,
- location_label=excluded.location_label,created_at=excluded.created_at,completed_at=excluded.completed_at,updated_at=now()
+ location_label=excluded.location_label,created_at=excluded.created_at,completed_at=excluded.completed_at,departed_at=excluded.departed_at,updated_at=now()
  where public.deliveries.owner_id=v_uid;
  get diagnostics v_count=row_count;
  if v_count<>jsonb_array_length(p_data->'deliveries') then raise insufficient_privilege using message='Delivery ownership conflict'; end if;

@@ -16,7 +16,7 @@ begin
  payload:=jsonb_build_object(
   'preferences',jsonb_build_object('name','Teste A','city','Campinas, SP','goal',15000,'activeSince','2026-10-18T12:00:00.000Z'),
   'places',jsonb_build_array(jsonb_build_object('id',f.place_a,'name','Estabelecimento de teste','address','Rua Teste, 100','rule','percent','rate',8000)),
-  'deliveries',jsonb_build_array(jsonb_build_object('id',f.delivery_a,'placeId',f.place_a,'order','TESTE-1','customer','Cliente fictício','phone','','address','Rua Teste, 100, Campinas, SP','complement','','notes','','customerFee',1000,'earnings',800,'orderTotal',5000,'cashCollected',5000,'retained',800,'tip',200,'payment','cash','status','delivered','createdAt','2026-10-18T12:00:00.000Z','completedAt','2026-10-18T13:00:00.000Z','day','2026-10-18','point',jsonb_build_object('lat',-22.9,'lon',-47.05,'label','Campinas'),'priority',false)),
+  'deliveries',jsonb_build_array(jsonb_build_object('id',f.delivery_a,'placeId',f.place_a,'order','TESTE-1','customer','Cliente fictício','phone','','address','Rua Teste, 100, Campinas, SP','complement','','notes','','customerFee',1000,'earnings',800,'orderTotal',5000,'cashCollected',5000,'retained',800,'tip',200,'payment','cash','status','delivered','createdAt','2026-10-18T12:00:00.000Z','completedAt','2026-10-18T13:00:00.000Z','departedAt',null,'day','2026-10-18','point',jsonb_build_object('lat',-22.9,'lon',-47.05,'label','Campinas'),'priority',false)),
   'movements',jsonb_build_array(jsonb_build_object('id',f.entry_a,'placeId',null,'day','2026-10-18','kind','expense','amount',300,'description','Combustível de teste'))
  );
  rev:=public.save_rider_workspace(payload,0);

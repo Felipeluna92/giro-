@@ -4,6 +4,9 @@ Aplicativo independente para motoboys, preparado para **Next.js na Vercel** e **
 
 ## Recursos
 
+- Login com escolha entre motoboy e comerciante, com painéis próprios.
+- Painel do comércio com equipe vinculada, entregas, taxas e mapa de localização compartilhada durante o turno.
+- Convites de uso único e autorização por estabelecimento. Consulte `docs/merchant.md` para conectar as contas.
 - Comandas impressas e manuscritas por visão multimodal, com ampliações de fotos longas e conferência dos campos.
 - Validação de telefone, separação de taxa de entrega/serviço e aviso quando os valores não fecham com o total escrito.
 - Repetição de leitura na mesma foto e leitor local de texto impresso como alternativa explícita.
@@ -19,7 +22,7 @@ Aplicativo independente para motoboys, preparado para **Next.js na Vercel** e **
 
 O projeto exclusivo do Giro já foi criado na região São Paulo: `rsucosyomvbpxezhllik`.
 
-1. A estrutura do banco **já foi aplicada** no projeto exclusivo do Giro. `supabase/schema.sql` é a referência para recriar um ambiente vazio; não execute novamente no banco existente. As quatro tabelas, as políticas e as funções estão descritas em `docs/database.md`.
+1. A estrutura do banco **já foi aplicada** no projeto exclusivo do Giro. Para recriar um ambiente vazio, use `supabase/schema.sql` e depois `supabase/merchant.sql`; não execute novamente no banco existente. A área do motoboy é descrita em `docs/database.md` e a do comerciante em `docs/merchant.md`.
 2. Em **Settings → API Keys**, obtenha a **Publishable key**. O aplicativo não precisa de chave secret ou service role.
 3. Em **Authentication → URL Configuration**, configure a **Site URL** com a URL final da Vercel e inclua `https://SEU-DOMINIO/auth/callback` e `https://SEU-DOMINIO/auth/callback?next=/redefinir-senha` entre os redirecionamentos permitidos.
 4. Mantenha a confirmação de e-mail habilitada. O cadastro usa PKCE; abra o e-mail no mesmo navegador em que começou o cadastro. Se o link expirar ou for aberto em outro aparelho, solicite um novo e-mail ou entre com sua senha após confirmar a conta.

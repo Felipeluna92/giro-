@@ -6,7 +6,7 @@ export const placeSchema = z.object({ id:z.string().uuid(), name:z.string().min(
 export const deliverySchema = z.object({
   id:z.string().uuid(), placeId:z.string().uuid(), order: z.string().max(60), customer:short, phone:z.string().max(30), address:z.string().min(5).max(400), complement:short, notes:z.string().max(1500),
   customerFee:cents, earnings:cents, orderTotal:cents, payment:z.enum(['paid','cash','card','pix']), cashCollected:cents, retained:cents, tip:cents,
-  status:z.enum(['pending','delivered','cancelled']), createdAt:z.string().datetime(), completedAt:z.string().datetime().nullable(), day:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  status:z.enum(['pending','delivered','cancelled']), departedAt:z.string().datetime().nullable().optional(), createdAt:z.string().datetime(), completedAt:z.string().datetime().nullable(), day:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   point:z.object({lat:z.number().min(-90).max(90),lon:z.number().min(-180).max(180),label:short}).nullable(), priority:z.boolean(),
 }).superRefine((d,ctx)=>{ if(d.retained > d.cashCollected || d.retained > d.earnings) ctx.addIssue({code:'custom',message:'O valor retido não pode superar o dinheiro recebido ou seu ganho.'}); });
 export const movementSchema = z.object({id:z.string().uuid(), day:z.string().regex(/^\d{4}-\d{2}-\d{2}$/), kind:z.enum(['expense','extra','payout','remittance']), amount:cents, description:z.string().min(1).max(200), placeId:z.string().uuid().nullable()});
