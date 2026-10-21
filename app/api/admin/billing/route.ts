@@ -18,7 +18,7 @@ export async function POST(request:Request){
    if(!price.livemode||!price.active||price.unit_amount!==plan.priceCents||price.currency!=='brl'||stripeObjectId(price.product)!==plan.product||price.recurring?.interval!=='month'||price.recurring.interval_count!==1)throw new Error('PRICE_MISMATCH');
   }
   stage='promoção do pacote';
-  const coupon=await stripe.coupons.retrieve(STRIPE_COMBO_COUPON);
+  const coupon=await stripe.coupons.retrieve(STRIPE_COMBO_COUPON,{expand:['applies_to']});
   if(!coupon.valid||coupon.amount_off!==4990||coupon.currency!=='brl'||coupon.duration!=='once'||!coupon.applies_to?.products?.includes(STRIPE_PLANS.combo.product))throw new Error('COUPON_MISMATCH');
   stage='portal de assinaturas';
   const portal=await stripe.billingPortal.configurations.retrieve(STRIPE_PORTAL_CONFIGURATION);
