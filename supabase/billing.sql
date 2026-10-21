@@ -33,6 +33,7 @@ revoke all on giro_private.administrators,giro_private.billing_plans,giro_privat
 grant select on giro_private.administrators,giro_private.subscriptions to authenticated;
 grant select on giro_private.billing_plans to anon,authenticated;
 grant usage on schema giro_private to anon;
+grant usage on schema giro_private to authenticated;
 grant select,insert,update on giro_private.billing_webhook to authenticated;
 grant update on giro_private.billing_plans to authenticated;
 grant usage on schema giro_private to service_role;

@@ -10,38 +10,58 @@ Os demais usuários precisam de assinatura vigente do painel correspondente: Mot
 
 `/assinar` permite escolher o plano, abrir o checkout quando configurado, conferir o e-mail da compra e consultar novamente a liberação. O cadastro é gratuito; ele não dá acesso às ferramentas. Uma conta autenticada sem assinatura é encaminhada a essa página. APIs protegidas respondem 402; as tabelas também têm políticas RLS restritivas, inclusive contra chamadas diretas ao Supabase.
 
-## Configuração da Kirvano
+## Stripe: checkout e assinaturas
 
-1. Crie um produto e uma oferta com recorrência mensal para cada plano na Kirvano. Use um produto/oferta exclusivos do Giro e mantenha o preço de exibição igual ao checkout.
-2. Em `/admin`, salve link do checkout (`https://pay.kirvano.com/...`), ID do produto, ID da oferta e preço. Deixe a venda desativada enquanto configura.
-3. Gere o token de integração na administração e copie-o para o campo Token do webhook da Kirvano. O token aparece somente na geração; no banco fica apenas SHA-256.
-4. Use o endpoint `https://giro-beryl.vercel.app/api/billing/webhook`. O cabeçalho inicial é `security-token`; a documentação pública da Kirvano descreve o token, mas não fixa o nome do cabeçalho. Confirme-o em um envio de teste e ajuste no administrador se necessário. Não há fallback inseguro por corpo ou URL.
-5. Selecione `SALE_APPROVED`, `SUBSCRIPTION_RENEWED`, `SUBSCRIPTION_CANCELED`, `SUBSCRIPTION_EXPIRED`, `SALE_REFUNDED`, `SALE_CHARGEBACK`; um evento `TEST` também é aceito para verificar a autenticação. Nenhum evento sem token correto verifica ou libera acesso.
-6. Atualize o status em `/admin`. Após um evento autenticado, marque abrir vendas e salve cada plano. Faça uma compra e um reembolso de teste no provedor antes dos anúncios; teste local não substitui o fluxo real da Kirvano.
+O catálogo ativo fica em `lib/stripe-catalog.ts`: três produtos separados, cada um com preço mensal em BRL. O pacote tem mensalidade de R$ 89,80 e cupom restrito ao produto, de R$ 49,90 com duração `once`; a primeira fatura elegível fica em R$ 39,90. O banco registra o uso da promoção após pagamento, inclusive quando há reembolso posterior.
 
-Rotacionar o token pausa novas vendas e exige atualizar a Kirvano, testar e reabrir os planos. As assinaturas já pagas não são apagadas.
+O servidor cria uma Checkout Session em modo `subscription`, com faturamento flexível e métodos de pagamento dinâmicos da Stripe. Cada cliente Stripe é associado ao UUID autenticado no Giro antes de abrir o checkout. A propriedade do pagamento vem dessa associação no banco, não de metadados editáveis, do e-mail digitado na compra ou da URL de retorno. O usuário deve ter confirmado o e-mail no Supabase antes de assinar.
 
-## Processamento
+Há reserva de checkout por conta, chave de idempotência persistida, reaproveitamento de checkout aberto e verificação de assinaturas já existentes. Os planos Comerciante e Pacote não podem gerar renovações sobrepostas. O plano Motoboy pode coexistir com um pacote que financia outro motoboy.
 
-O endpoint usa uma chave Supabase de servidor existente (`SUPABASE_SECRET_KEY` ou `SUPABASE_SERVICE_ROLE_KEY`), sem expor seu valor. Nenhuma chave administrativa é enviada ao navegador. Somente esse papel executa as RPCs de registro de pagamentos e vinculação de compras pendentes.
+### Configuração privada do servidor
 
-A liberação exige evento aprovado, tipo recorrente, status aprovado e produto **e oferta** cadastrados. O vencimento vem de `plan.next_charge_date`, limitado a um período mensal de até 35 dias a partir do evento. Datas sem fuso seguem os exemplos brasileiros da Kirvano e são interpretadas como UTC−03:00. Não se inventam dias pagos quando falta vencimento. Eventos pendentes, Pix gerado, compra recusada e produtos não configurados não liberam acesso.
+Na Vercel, ambiente Production:
 
-A compra é associada ao UUID de uma conta com o mesmo e-mail confirmado. Compras anteriores à confirmação ficam pendentes de associação e são vinculadas por uma operação exclusiva do servidor ao visitar `/assinar`. Depois de associada, uma venda não muda de dono. A assinatura armazena somente identificador da venda, plano, dono, e-mail necessário para associação, estado e datas; não armazena CPF, cartão, telefone ou payload completo.
+- `STRIPE_ACCOUNT_ID`: conta Stripe de produção confirmada pelo proprietário.
+- `STRIPE_WEBHOOK_SECRET`: segredo de assinatura do endpoint, salvo como Secret. Já provisionado pela integração; não precisa copiar para o código.
+- `STRIPE_SECRET_KEY`: chave **restrita** de produção criada pelo titular e salva como Secret. O acesso do ChatGPT à Stripe não fornece uma credencial permanente ao aplicativo.
+- `SUPABASE_SECRET_KEY` ou `SUPABASE_SERVICE_ROLE_KEY`: credencial existente do backend Supabase, nunca pública.
 
-Eventos repetidos não estendem validade, eventos antigos não substituem o estado mais recente e reembolso/chargeback são finais para aquela venda. Cancelamento conserva o período já pago; expiração e estorno bloqueiam. Outra compra válida continua liberando seu próprio período. RLS continua aplicando as regras de propriedade e vínculo; ser administrador não transforma os painéis em leitura indiscriminada de dados de terceiros.
+A chave restrita deve permitir leitura e escrita em Customers e Checkout Sessions, escrita no Customer Portal e leitura em Products, Prices, Coupons, Subscriptions, Invoices, Invoice Payments, PaymentIntents, Charges e Disputes. Os nomes/grupos de permissões podem variar na tela da Stripe. A validação em `/admin` confere acesso aos três preços, cupom, configuração do portal e banco sem cobrar clientes. Não compartilhe chaves em mensagens; não use prefixo `NEXT_PUBLIC_` em segredos. Faça novo deploy após alterar o ambiente.
 
-Todas as funções novas são `SECURITY INVOKER`, com `search_path=''` e concessões específicas. O papel de servidor recebe somente `id`, `email` e `email_confirmed_at` de `auth.users` para a busca limitada do comprador; visitantes e usuários comuns não recebem essas permissões.
+O catálogo mantém as vendas indisponíveis quando a chave ou o segredo do webhook estão ausentes. A validação administrativa e os testes de cobrança continuam necessários antes dos anúncios. Não foram habilitados Stripe Tax, cobrança automática de tributos ou alterações globais de recuperação de receita na conta. Stripe Tax exige avaliação e cadastros fiscais apropriados antes de ativar coleta automática.
 
-## Verificação
+### Notificações e liberação
 
-`npm run typecheck`, `npm test` e `npm run build` verificam aplicação e regras de interpretação. Os testes SQL executam com papéis reais e fixtures revertidas: `verify-billing.sql` cobre isenção, plano correto, usuário sem pagamento, assinatura expirada, e-mail não confirmado, impedimento de autopromoção, funções exclusivas do servidor, repetição, cancelamento e estorno. `verify-merchant.sql`, `verify-invites.sql` e `verify.sql` preservam as verificações de dados e isolamento anteriores.
+Endpoint: `https://giro-beryl.vercel.app/api/stripe/webhook`. API e SDK fixados em `2026-09-30.endive` e `stripe@23.0.0`. O endpoint valida o corpo bruto e o cabeçalho `Stripe-Signature`, inclusive tolerância de tempo, e recusa eventos de teste ou de outra conta no ambiente de produção. Nenhum segredo é enviado ao navegador ou registrado em logs.
 
-Para instalação vazia, execute `schema.sql`, `merchant.sql`, `billing.sql`, `combo.sql` e atribua a conta do proprietário no banco antes do login. Em produção, use migrações; não reaplique os arquivos completos.
+Eventos: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`, `invoice.payment_action_required`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.updated` e `charge.dispute.closed`.
+
+O servidor consulta o estado atual da assinatura, a fatura e seus Invoice Payments. Só um pagamento confirmado por PaymentIntent bem-sucedido para a conta correta e um período mensal válido concedem acesso. Faturas pendentes, pagamentos parciais, períodos inválidos, preços diferentes ou marcação manual de fatura paga sem pagamento Stripe não liberam o produto.
+
+O registro por fatura permite renovar o período pago sem duplicar acesso em reenvios. Eventos repetidos são idempotentes; cancelamento da renovação preserva o período pago; reembolso integral ou disputa revogam a fatura correspondente. Reembolso de uma fatura antiga não apaga um período posterior pago. Uma disputa ganha restaura o período pago ainda válido. A validade é consultada pelo banco em cada autorização e não depende de atualizar o JWT.
+
+O evento adicional `product.updated`, restrito aos produtos Giro, verifica a entrega real do webhook sem cobrar ninguém. Registra somente um identificador de saúde; não concede assinatura. O status administrativo diferencia notificação recebida de pagamento validado.
+
+O endpoint legado `/api/billing/webhook` responde 410, e os formulários/RPCs de checkout e token da Kirvano foram retirados de uso. Os dados históricos permanecem preservados.
+
+### Gestão pelo assinante
+
+`/assinar` permite abrir o checkout, consultar a liberação e usar **Gerenciar assinatura, cartão e faturas**. O portal Stripe permite atualizar dados/cartão, consultar faturas e cancelar a renovação ao final do período. Troca de plano no portal está desativada para manter os direitos de Comerciante e Pacote consistentes; uma troca deve ser planejada após o cancelamento/encerramento correspondente.
+
+Retornos do checkout: `/assinar?plano=rider&pagamento=recebido`, `/assinar?plano=merchant&pagamento=recebido` ou `/assinar?plano=combo&pagamento=recebido`. A tela aguarda e consulta o acesso por até um minuto; também oferece atualização manual. O retorno nunca concede acesso por si só. Após pagamento do pacote, o comerciante segue para `/comerciante/equipe`.
+
+### Banco e verificação
+
+Use migrações em produção. Para um banco vazio, a ordem é `schema.sql`, `merchant.sql`, `billing.sql`, `combo.sql`, `stripe.sql`; não reaplique arquivos completos no banco existente. As novas tabelas do schema privado têm RLS e só o backend pode mudar clientes, reservas de checkout, faturas e eventos. Funções são `SECURITY INVOKER`, com `search_path=''` e concessões explícitas.
+
+`npm run typecheck`, `npm test` e `npm run build` verificam tipos, regras de período/assinatura/assinatura criptográfica e compilação. `supabase/verify-stripe.sql` usa papéis reais e uma transação revertida para testar propriedade do cliente, concorrência, pagamento pendente, pacote, promoção, duplicatas, ordem de eventos, cancelamento, reembolso, fatura posterior, disputa e bloqueio de chamadas pelo usuário.
+
+Os testes históricos `verify-billing.sql` e `verify-combo.sql` contêm chamadas à configuração antiga: execute-os antes de `stripe.sql` em um ambiente vazio, ou adapte as verificações legadas em ambiente já migrado. Não reaplique privilégios antigos para fazê-los passar na produção. Testes com fixtures não substituem um ciclo completo de cobrança em sandbox com chave própria e configuração de catálogo desse ambiente.
 
 ## Pacote e entrada por usuário
 
-Cadastre na Kirvano uma assinatura mensal do pacote com primeira cobrança de R$ 39,90 e cobranças seguintes de R$ 89,80. A Kirvano documenta a opção de preço diferente na primeira cobrança. Cadastre também uma oferta do mesmo produto a R$ 89,80 desde o início, usada para novas compras de contas que já utilizaram a promoção. Preencha os dois links e IDs de oferta no administrador. O endpoint aceita as duas ofertas configuradas; a cobrança efetiva e sua periodicidade dependem das configurações da Kirvano, que precisam de teste real antes de abrir vendas.
+O produto Pacote usa a mensalidade normal de R$ 89,80. A Checkout Session aplica o cupom de primeira fatura somente quando o banco informa que a promoção ainda não foi usada. Não há checkout promocional público reutilizável.
 
 Configure a página de obrigado como `/assinar?plano=combo`. Somente o pagamento confirmado libera o pacote; a URL não concede acesso. Depois da confirmação, essa página encaminha o comerciante a `/comerciante/equipe`. A assinatura libera o painel do comprador como comerciante e uma vaga separada de motoboy, não o painel de motoboy na conta do comprador.
 
@@ -57,4 +77,4 @@ Criar o usuário incluído no pacote também não vincula loja e não compartilh
 
 `verify-combo.sql` verifica vaga única, concorrência, nomes de usuário, APIs exclusivas do backend, independência sem loja, vínculo opcional, isolamento dos dois perfis, bloqueio de tentativas, escolha da oferta normal após uso da promoção e estorno dos dois acessos. A identidade Auth nesses testes é uma fixture SQL sem senha ou sessão; o teste não simula uma cobrança real nem uma sessão de login real do provedor.
 
-Referências do contrato consultado: [configurar webhook](https://help.kirvano.com/hc/central-de-ajuda/articles/1765385505-configurando-integracao-via-webhook) e [eventos de assinatura](https://help.kirvano.com/hc/central-de-ajuda/articles/1775656489-ex).
+Referências: [assinaturas e webhooks](https://docs.stripe.com/billing/subscriptions/webhooks), [Checkout](https://docs.stripe.com/payments/checkout/build-subscriptions), [Customer Portal](https://docs.stripe.com/customer-management/integrate-customer-portal).

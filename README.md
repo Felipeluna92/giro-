@@ -23,7 +23,7 @@ Aplicativo independente para motoboys, preparado para **Next.js na Vercel** e **
 O projeto exclusivo do Giro já foi criado na região São Paulo: `rsucosyomvbpxezhllik`.
 
 1. A estrutura do banco **já foi aplicada** no projeto exclusivo do Giro. Para recriar um ambiente vazio, use `supabase/schema.sql` e depois `supabase/merchant.sql`; não execute novamente no banco existente. A área do motoboy é descrita em `docs/database.md` e a do comerciante em `docs/merchant.md`.
-2. Em **Settings → API Keys**, obtenha a **Publishable key**. O aplicativo não precisa de chave secret ou service role.
+2. Em **Settings → API Keys**, obtenha a **Publishable key**. O navegador usa somente a Publishable key. O faturamento e a criação do motoboy do pacote usam uma chave Supabase de servidor, já configurada na Vercel.
 3. Em **Authentication → URL Configuration**, configure a **Site URL** com a URL final da Vercel e inclua `https://SEU-DOMINIO/auth/callback` e `https://SEU-DOMINIO/auth/callback?next=/redefinir-senha` entre os redirecionamentos permitidos.
 4. Mantenha a confirmação de e-mail habilitada. O cadastro usa PKCE; abra o e-mail no mesmo navegador em que começou o cadastro. Se o link expirar ou for aberto em outro aparelho, solicite um novo e-mail ou entre com sua senha após confirmar a conta.
 5. Antes de um lançamento público, configure o envio de e-mails de produção no Supabase e teste cadastro e recuperação no domínio final.
@@ -83,4 +83,4 @@ A prioridade é uma marcação para decisão manual. O cálculo das rotas minimi
 
 O financeiro considera o dia de conclusão no fuso `America/Sao_Paulo`. Acertos por estabelecimento acumulam todos os dias; o fechamento diário inclui somente os registros da data selecionada. O dinheiro recebido por pedidos não é somado como ganho pessoal.
 
-A demonstração é claramente identificada, funciona apenas em memória e não altera registros reais. O Giro inclui página de vendas interativa, planos separados por painel, isenção administrativa e integração de assinaturas com a Kirvano. A abertura de vendas depende de configurar e testar as ofertas no provedor; veja [planos e cobrança](docs/billing.md). O comerciante acompanha entregas vinculadas; esta versão ainda não distribui pedidos para a equipe.
+A demonstração é claramente identificada, funciona apenas em memória e não altera registros reais. O Giro inclui página de vendas interativa, planos separados por painel, isenção administrativa e integração de assinaturas com a Stripe. A abertura de vendas depende da chave restrita do servidor e da validação dos pagamentos; veja [planos e cobrança](docs/billing.md). O comerciante acompanha entregas vinculadas; esta versão ainda não distribui pedidos para a equipe.

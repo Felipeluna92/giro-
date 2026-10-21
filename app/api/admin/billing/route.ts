@@ -1,20 +1,24 @@
-import {createHash,randomBytes} from 'node:crypto';
-import {z} from 'zod';
-import {portalSession,portalBody,portalResponse} from '../../../../lib/portal-api';
-const schema=z.discriminatedUnion('action',[
- z.object({action:z.literal('webhook'),header:z.string().regex(/^[a-z][a-z0-9-]{0,79}$/)}),
- z.object({action:z.literal('plan'),portal:z.enum(['rider','merchant','combo']),price:z.number().int().min(100).max(10000000).nullable(),first:z.number().int().min(100).max(10000000).nullable().default(null),renewalCheckout:z.string().max(500).refine(v=>!v||/^https:\/\/pay\.kirvano\.com\/\S+$/.test(v)).default(''),renewalOffer:z.string().trim().max(100).default(''),checkout:z.string().max(500).refine(v=>!v||/^https:\/\/pay\.kirvano\.com\/\S+$/.test(v)),product:z.string().trim().max(100),offer:z.string().trim().max(100),enabled:z.boolean()})
-]);
+import {portalSession,portalResponse} from '../../../../lib/portal-api';
+import {stripeClient,stripeConfigured,stripeRpc} from '../../../../lib/stripe-server';
+import {STRIPE_PLANS,STRIPE_COMBO_COUPON,STRIPE_PORTAL_CONFIGURATION} from '../../../../lib/stripe-catalog';
+import {stripeObjectId} from '../../../../lib/stripe-events';
+export const maxDuration=60;
 export async function POST(request:Request){
  const session=await portalSession(request);if(session.error)return session.error;
  if(!session.user.access.isAdmin)return portalResponse({error:'Acesso exclusivo da administração.'},403);
- const parsed=schema.safeParse(await portalBody(request));if(!parsed.success)return portalResponse({error:'Confira o preço, o link da Kirvano e os identificadores.'},400);
- const body=parsed.data;
- if(body.action==='webhook'){
-  const token=randomBytes(32).toString('hex'),hash=createHash('sha256').update(token).digest('hex');
-  const {error}=await session.supabase.rpc('admin_configure_giro_webhook',{p_hash:hash,p_header:body.header});
-  return error?portalResponse({error:'Não foi possível configurar a integração.'},503):portalResponse({token});
- }
- const {error}=await session.supabase.rpc('admin_save_giro_offer',{p_portal:body.portal,p_price:body.price,p_first:body.first,p_renewal_checkout:body.renewalCheckout,p_renewal_offer:body.renewalOffer,p_checkout:body.checkout,p_product:body.product,p_offer:body.offer,p_enabled:body.enabled});
- return error?portalResponse({error:'Confira os campos. Configure o token do webhook antes de habilitar as vendas.'},400):portalResponse({success:true});
+ if(request.headers.get('origin')!==new URL(request.url).origin)return portalResponse({error:'Origem inválida.'},403);
+ if(!stripeConfigured())return portalResponse({error:'Falta configurar a chave restrita STRIPE_SECRET_KEY na Vercel e publicar novamente.'},503);
+ try{
+  const stripe=stripeClient();
+  for(const plan of Object.values(STRIPE_PLANS)){
+   const price=await stripe.prices.retrieve(plan.price);
+   if(!price.livemode||!price.active||price.unit_amount!==plan.priceCents||price.currency!=='brl'||stripeObjectId(price.product)!==plan.product||price.recurring?.interval!=='month'||price.recurring.interval_count!==1)throw new Error('PRICE_MISMATCH');
+  }
+  const coupon=await stripe.coupons.retrieve(STRIPE_COMBO_COUPON);
+  if(!coupon.valid||coupon.amount_off!==4990||coupon.currency!=='brl'||coupon.duration!=='once'||!coupon.applies_to?.products?.includes(STRIPE_PLANS.combo.product))throw new Error('COUPON_MISMATCH');
+  const portal=await stripe.billingPortal.configurations.retrieve(STRIPE_PORTAL_CONFIGURATION);
+  if(!portal.active||portal.features.subscription_cancel.mode!=='at_period_end')throw new Error('PORTAL_MISMATCH');
+  await stripeRpc('stripe_billing_status');
+  return portalResponse({success:true,message:'Chave, planos, promoção, portal e banco validados. A confirmação automática ainda deve ser conferida em um pagamento de teste.'});
+ }catch{console.error('giro_stripe_setup_validation_failed');return portalResponse({error:'A validação falhou. Confira se a chave pertence à conta correta e tem as permissões indicadas.'},503);}
 }
