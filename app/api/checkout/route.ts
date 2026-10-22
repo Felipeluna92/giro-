@@ -1,3 +1,5 @@
+import {cookies} from 'next/headers';
+import {ATTRIBUTION_COOKIE,decodeAttribution} from '../../../lib/attribution';
 import {getRiderUser} from '../../../lib/auth';
 import {portalBody,portalResponse} from '../../../lib/portal-api';
 import {portalPath} from '../../../lib/access';
@@ -12,7 +14,8 @@ export async function POST(request:Request){
  if(user.access.managedRider)return portalResponse({error:'A assinatura do pacote é gerenciada pelo comerciante que criou seu usuário.'},403);
  if(user.access[plan])return portalResponse({url:portalPath(plan)});
  if(!stripeConfigured())return portalResponse({error:'As assinaturas estão em preparação. Volte em breve.'},503);
- try{return portalResponse({url:await createGiroCheckout(user.userId,user.email,plan)});}
+ const tracking=request.headers.get('sec-gpc')==='1'?{}:decodeAttribution((await cookies()).get(ATTRIBUTION_COOKIE)?.value);
+ try{return portalResponse({url:await createGiroCheckout(user.userId,user.email,plan,tracking)});}
  catch(error){
   const code=error instanceof Error?error.message:'';
   if(code==='CHECKOUT_BUSY')return portalResponse({error:'Seu checkout está sendo preparado. Aguarde alguns segundos e tente novamente.'},409);

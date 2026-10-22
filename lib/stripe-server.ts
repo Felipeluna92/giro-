@@ -3,6 +3,7 @@ import StripeClient from 'stripe';
 import {billingClient} from './billing-server';
 import {STRIPE_ACCOUNT,STRIPE_API_VERSION,STRIPE_PLANS,STRIPE_COMBO_COUPON,STRIPE_PORTAL_CONFIGURATION,plansOverlap} from './stripe-catalog';
 import {subscriptionPlan,stripeObjectId} from './stripe-events';
+import {sanitizeAttribution,utmifyClientReference,type Attribution} from './attribution';
 import type {PlanId} from './access';
 
 export function stripeConfigured(){
@@ -29,7 +30,8 @@ export async function customerForUser(userId:string,email:string){
  const customer=await stripeClient().customers.create({email,preferred_locales:['pt-BR'],metadata:{app:'giro'}},{idempotencyKey:`giro-customer:${userId}`});
  return stripeRpc<string>('stripe_bind_customer',{p_user:userId,p_customer:customer.id});
 }
-export async function createGiroCheckout(userId:string,email:string,plan:PlanId){
+export async function createGiroCheckout(userId:string,email:string,plan:PlanId,attribution:Attribution={}){
+ const tracking=sanitizeAttribution(attribution),reference=utmifyClientReference(tracking);
  const stripe=stripeClient();
  const lease=await stripeRpc<{lease:string;attempt:string;session_id:string|null;plan:PlanId;intro_used:boolean}>('stripe_checkout_reserve',{p_user:userId,p_plan:plan});
  let sessionId:string|null=null;
@@ -44,17 +46,17 @@ export async function createGiroCheckout(userId:string,email:string,plan:PlanId)
   if(lease.session_id){
    const previous=await stripe.checkout.sessions.retrieve(lease.session_id);
    if(stripeObjectId(previous.customer)!==customer)throw new Error('CHECKOUT_OWNER_MISMATCH');
-   if(previous.status==='open'&&lease.plan===plan&&previous.url)return previous.url;
+   if(previous.status==='open'&&lease.plan===plan&&previous.url&&(!reference||previous.client_reference_id===reference))return previous.url;
    if(previous.status==='open')await stripe.checkout.sessions.expire(previous.id);
    attempt=await stripeRpc<string>('stripe_checkout_rotate',{p_user:userId,p_lease:lease.lease,p_plan:plan});
   }else if(lease.plan!==plan){attempt=await stripeRpc<string>('stripe_checkout_rotate',{p_user:userId,p_lease:lease.lease,p_plan:plan});}
   const price=await stripe.prices.retrieve(STRIPE_PLANS[plan].price);
   if(!price.active||!price.livemode||price.unit_amount!==STRIPE_PLANS[plan].priceCents||price.currency!=='brl'||price.recurring?.interval!=='month'||price.recurring.interval_count!==1||stripeObjectId(price.product)!==STRIPE_PLANS[plan].product)throw new Error('PRICE_MISMATCH');
   const session=await stripe.checkout.sessions.create({
-   mode:'subscription',customer,locale:'pt-BR',client_reference_id:userId,
+   mode:'subscription',customer,locale:'pt-BR',...(reference?{client_reference_id:reference}:{}),
    line_items:[{price:price.id,quantity:1}],
-   subscription_data:{billing_mode:{type:'flexible'},metadata:{app:'giro'}},
-   metadata:{app:'giro',attempt},
+   subscription_data:{billing_mode:{type:'flexible'},metadata:{app:'giro',...tracking}},
+   metadata:{app:'giro',attempt,...tracking},
    integration_identifier:'giro_subscription_rkmbvazq',
    ...(plan==='combo'&&!lease.intro_used?{discounts:[{coupon:STRIPE_COMBO_COUPON}]}:{}),
    success_url:`${siteUrl()}/assinar?plano=${plan}&pagamento=recebido`,
