@@ -65,8 +65,10 @@ export async function createGiroCheckout(userId:string,email:string,plan:PlanId)
   return session.url;
  }finally{await stripeRpc('stripe_checkout_finish',{p_user:userId,p_lease:lease.lease,p_session:sessionId});}
 }
-export async function createGiroPortal(userId:string){
- const customer=await stripeRpc<string|null>('stripe_customer',{p_user:userId});
+export type OwnedStripeCustomer={id:string;plans:PlanId[]};
+export async function createGiroPortal(userId:string,requested?:string){
+ const owned=await stripeRpc<OwnedStripeCustomer[]>('stripe_owned_customers',{p_user:userId});
+ const customer=requested?owned.find(item=>item.id===requested)?.id:owned[0]?.id;
  if(!customer)throw new Error('NO_CUSTOMER');
  return stripeClient().billingPortal.sessions.create({customer,configuration:STRIPE_PORTAL_CONFIGURATION,return_url:`${siteUrl()}/assinar`,locale:'pt-BR'});
 }

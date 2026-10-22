@@ -2,6 +2,7 @@ import 'server-only';
 import type Stripe from 'stripe';
 import {stripeClient,stripeRpc} from './stripe-server';
 import {invoiceSubscription,invoicePeriod,invoiceIsPaid,stripeObjectId,subscriptionPlan} from './stripe-events';
+import {fulfillPublicPurchase} from './purchase-server';
 import {STRIPE_PLANS} from './stripe-catalog';
 
 type InvoiceRecord={id:string;period_end:string;paid:boolean;amount_paid:number;refunded?:boolean;disputed?:boolean};
@@ -38,8 +39,10 @@ async function syncSubscription(event:Stripe.Event,id:string,invoice?:Stripe.Inv
  if(invoice)record=await recordInvoice(invoice,subscription);
  else if(typeof subscription.latest_invoice==='object'&&subscription.latest_invoice)record=await recordInvoice(subscription.latest_invoice,subscription);
  if(record&&disputed!==undefined)record.disputed=disputed;
+ if(record?.paid&&!record.refunded&&!record.disputed&&new Date(record.period_end).getTime()>Date.now()&&['active','past_due'].includes(subscription.status))await fulfillPublicPurchase(subscription);
+ const canonical=await stripeRpc<string|null>('purchase_canonical_customer',{p_customer:customer});
  await stripeRpc('stripe_apply_event',{
-  p_event:`${event.id}:${record?.id??id}`,p_customer:customer,p_subscription:id,p_plan:plan,p_status:subscription.status,
+  p_event:`${event.id}:${record?.id??id}`,p_customer:canonical??customer,p_subscription:id,p_plan:plan,p_status:subscription.status,
   p_ended_at:date(subscription.ended_at),p_cancel_at:date(subscription.cancel_at),p_event_at:date(event.created),p_invoice:record,
  });
 }
