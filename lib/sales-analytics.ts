@@ -3,7 +3,7 @@ type PropertyValue = string|number|boolean;
 const safeStrings:Record<string,readonly string[]>={
  audience:['rider','merchant'],plan:['rider','merchant','combo'],method:['card','pix'],
  position:['nav','hero','pain','comparison','steps','demo','merchant','proof','plans','calculator','fit','onboarding','final','mobile','footer'],
- destination:['purchase','plans','demo','merchant'],
+ destination:['purchase','plans','demo','merchant','comparison','steps','onboarding'],
  faq:['mais-um-app','loja','internet','acesso','pacote','cancelamento','ia','limites','gps','privacidade'],
 };
 const numericBounds:Record<string,[number,number]>={step:[0,3],depth:[25,100],fee_cents:[300,2000],amount_cents:[0,100000]};
