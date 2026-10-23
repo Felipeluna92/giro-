@@ -1,0 +1,37 @@
+begin;
+do $$
+declare email1 text:='purchase-'||gen_random_uuid()::text||'@example.test'; user1 uuid:=gen_random_uuid(); user2 uuid:=gen_random_uuid(); a jsonb; b jsonb; f jsonb; reused jsonb; customer1 text:='cus_Fixture'||replace(gen_random_uuid()::text,'-',''); customer2 text:='cus_Fixture'||replace(gen_random_uuid()::text,'-',''); session1 text:='cs_fixture_'||replace(gen_random_uuid()::text,'-',''); session2 text:='cs_fixture_'||replace(gen_random_uuid()::text,'-',''); sub1 text:='sub_Fixture'||replace(gen_random_uuid()::text,'-',''); visitor1 text:=repeat('a',64); visitor2 text:=repeat('b',64); v boolean;
+begin
+ a:=public.purchase_reserve(visitor1,email1,'combo');
+ if (a->>'first_price_cents')::int<>3990 then raise exception 'Wrong introductory price';end if;
+ if public.purchase_buyer(email1) is not null then raise exception 'Account was created before payment';end if;
+ begin perform public.purchase_reserve(visitor1,email1,'combo');raise exception 'Lease failed';exception when lock_not_available then null;end;
+ perform public.purchase_finish((a->>'id')::uuid,(a->>'lease')::uuid,customer1,session1);
+ reused:=public.purchase_reserve(visitor1,email1,'combo');
+ if reused->>'id'<>a->>'id' then raise exception 'Checkout was duplicated';end if;
+ perform public.purchase_finish((reused->>'id')::uuid,(reused->>'lease')::uuid,customer1,session1);
+ if public.purchase_status(visitor2,session1) is not null then raise exception 'Order disclosed to another visitor';end if;
+ if (public.purchase_status(visitor1,session1)->>'paid')::boolean then raise exception 'Unpaid order reported as paid';end if;
+ begin perform public.purchase_fulfill_begin(customer1,sub1,'cs_wrong');raise exception 'Wrong session accepted';exception when check_violation then null;end;
+ f:=public.purchase_fulfill_begin(customer1,sub1,session1);
+ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data,raw_user_meta_data) values(user1,email1,null,'{}','{}'),(user2,'other-'||user2::text||'@example.test',now(),'{}','{}');
+ begin perform public.purchase_fulfill_finish((a->>'id')::uuid,(f->>'fulfillment_lease')::uuid,user2,true);raise exception 'Wrong buyer accepted';exception when insufficient_privilege then null;end;
+ perform public.purchase_fulfill_finish((a->>'id')::uuid,(f->>'fulfillment_lease')::uuid,user1,true);
+ if public.purchase_canonical_customer(customer1)<>customer1 then raise exception 'Primary mapping missing';end if;
+ if not (public.purchase_fulfill_begin(customer1,sub1,session1)->>'done')::boolean then raise exception 'Email deduplication failed';end if;
+ v:=public.stripe_apply_event('evtFixture:'||sub1,customer1,sub1,'combo','active',null,null,now(),jsonb_build_object('id','in_Fixture'||replace(gen_random_uuid()::text,'-',''),'period_end',now()+interval '30 days','paid',true,'amount_paid',3990));
+ if not v then raise exception 'Paid access was not reconciled';end if;
+ if not public.purchase_has_overlap(email1,'merchant') then raise exception 'Overlapping subscription not detected';end if;
+ if public.purchase_has_overlap(email1,'rider') then raise exception 'Separate rider plan incorrectly blocked';end if;
+ b:=public.purchase_reserve(visitor2,email1,'rider');
+ perform public.purchase_finish((b->>'id')::uuid,(b->>'lease')::uuid,customer2,session2);
+ f:=public.purchase_fulfill_begin(customer2,'sub_AnotherFixture',session2);
+ perform public.purchase_fulfill_finish((b->>'id')::uuid,(f->>'fulfillment_lease')::uuid,user1,true);
+ if public.purchase_canonical_customer(customer2)<>customer1 then raise exception 'Additional customer ownership failed';end if;
+ if jsonb_array_length(public.stripe_owned_customers(user1))<>2 then raise exception 'Multiple purchases cannot be managed';end if;
+ if public.stripe_owned_customers(user2)<>'[]'::jsonb then raise exception 'Another account can manage buyer subscriptions';end if;
+ a:=public.purchase_reserve(repeat('c',64),email1,'combo');
+ if (a->>'first_price_cents')::int<>8980 then raise exception 'Introductory promotion used twice';end if;
+ if has_function_privilege('anon','public.purchase_fulfill_finish(uuid,uuid,uuid,boolean)','execute') or has_function_privilege('authenticated','public.purchase_buyer(text)','execute') then raise exception 'Billing operations exposed to browser roles';end if;
+end $$;
+rollback;

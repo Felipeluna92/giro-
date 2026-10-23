@@ -1,4 +1,4 @@
-import { requireRiderUser } from '../../lib/auth';
-import ResetForm from './reset-form';
+import DefinePassword from '../definir-senha/password-form';
+import {isSupabaseConfigured} from '../../lib/supabase/config';
 export const dynamic='force-dynamic';
-export default async function Reset(){await requireRiderUser();return <ResetForm/>}
+export default function Reset(){return <DefinePassword configured={isSupabaseConfigured()}/>;}
