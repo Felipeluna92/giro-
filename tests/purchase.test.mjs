@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {purchasePlan,purchaseEmail,canFulfillPurchase} from '../lib/purchase-policy.ts';
+import {checkoutDiagnostic} from '../lib/checkout-diagnostic.ts';
+test('Checkout diagnostics expose fixed labels without provider messages or customer data',()=>{
+ const diagnostic=checkoutDiagnostic({type:'StripeInvalidRequestError',code:'parameter_unknown',param:'payment_method_configuration',message:'payment_method_configuration failed for buyer@example.com; secret-value',request:{apiKey:'secret-value'}});
+ assert.deepEqual(diagnostic,{type:'StripeInvalidRequestError',code:'parameter_unknown',param:'payment_method_configuration',hints:['payment_method_configuration']});
+ assert.deepEqual(checkoutDiagnostic({type:'secret-value',code:'buyer@example.com',param:'secret-value',message:'secret-value'}),{type:'processing_failed',code:null,param:null,hints:[]});
+});
 test('Public checkout accepts only supported plans and an email, never an access flag',()=>{
  assert.equal(purchasePlan('rider'),'rider');assert.equal(purchasePlan('merchant'),'merchant');assert.equal(purchasePlan('combo'),'combo');
  for(const value of [null,'admin',{plan:'rider'},'__proto__'])assert.equal(purchasePlan(value),null);
