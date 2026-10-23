@@ -1,7 +1,33 @@
-import {ArrowRight,ArrowUpRight,Bike,Camera,Check,Navigation,ReceiptText,Route,ShieldCheck,Store,Wallet} from 'lucide-react';
-import type {Portal} from '../lib/access';
-import {DemoMap} from './sales-demo';
-export default function SalesHero({portal}:{portal:Portal}){
- const rider=portal==='rider';
- return <div className="hero-art v2-art"><div className="v2-orbit"/><div className="v2-orbit second"/><div className="v2-paper"><ReceiptText size={24}/><span>COMANDA #1042</span><i/><div>Taxa de entrega <b>R$ 8,00</b></div><small><Check size={12}/> Dados conferidos</small></div><div className="hero-phone"><div className="phone-island"/><div className="phone-top"><span>9:41</span><span>● ● ▰</span></div><div className="phone-brand">giro<span>.</span><small>{rider?'MEU TURNO':'MEU COMÉRCIO'}</small></div><div className="phone-greeting">{rider?'Bora, Alex':'Olá, comerciante'} <span>✦</span><h3>{rider?'Seu corre, organizado.':'Sua equipe, conectada.'}</h3></div><div className="phone-stats"><div><small>{rider?'Taxas de 3 entregas':'Taxas a pagar · Alex'}</small><strong>R$ 24<span>,50</span></strong></div><span><Wallet size={25}/></span></div><DemoMap merchant={!rider}/>{rider?<div className="phone-order"><span className="phone-order-icon"><ReceiptText size={22}/></span><div><small>PRÓXIMA ENTREGA · #1042</small><strong>Rua das Flores, 120</strong><span>Endereço de exemplo</span></div><b>R$ 8</b></div>:<div className="v2-phone-team"><span>A</span><div><b>Alex</b><small>Pedido #1042</small></div><strong>Em rota</strong></div>}<div className="phone-action"><Navigation size={17}/>{rider?'Próximas paradas no controle':'Retirada, rota e conclusão'}<ArrowRight size={15}/></div><div className="phone-bottom"><Bike size={18}/><Route size={18}/><span className="phone-scan"><Camera size={22}/></span><Wallet size={18}/><Store size={18}/></div></div><div className="v2-floating-note"><span className="cube-icon green">{rider?<Wallet size={30}/>:<Store size={30}/>}</span><div><small>{rider?'FECHAMENTO DO DIA':'ACERTO POR MOTOBOY'}</small><b>{rider?'Cada taxa tem seu lugar.':'Saiba o que falta pagar.'}</b><span><ShieldCheck size={12}/>{rider?'Você confere. Você controla.':'Localização com autorização.'}</span></div></div><div className="hero-art-label">Interface ilustrativa · dados fictícios <ArrowUpRight size={12}/></div></div>;
+import {useId} from 'react';
+import {ArrowUpRight,Bike,Camera,Check,MapPin,Navigation,ReceiptText,Route,ShieldCheck,Store,Wallet} from 'lucide-react';
+import type {SalesAudience} from '../lib/sales-content';
+
+export function DemoMap({merchant=false}:{merchant?:boolean}){
+ const id=useId();
+ return <div className="gs-map" role="img" aria-label={merchant?'Mapa ilustrativo com a última localização autorizada de Alex. Dados fictícios.':'Rota ilustrativa com três paradas. Dados fictícios.'}>
+  <svg viewBox="0 0 480 210" aria-hidden="true"><defs><pattern id={id} width="66" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-16)"><rect x="6" y="6" width="50" height="42" rx="9" fill="#dce5d4"/><path d="M0 0H66V60" fill="none" stroke="#fffdf8" strokeWidth="12"/></pattern></defs><rect width="480" height="210" fill="#edf1e8"/><rect width="480" height="210" fill={`url(#${id})`}/><path d="M-15 188Q110 94 240 148T500 66" fill="none" stroke="#c1dce1" strokeWidth="23"/><path d="M70 151L147 98L224 122L308 57L397 82" fill="none" stroke="#38533c" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>{[[70,151],[224,122],[397,82]].map(([x,y],i)=><g key={i} transform={`translate(${x},${y})`}><circle r="17" fill={i===0?'#193b2c':'#c8f477'} stroke="white" strokeWidth="4"/><text y="5" textAnchor="middle" fontSize="13" fontWeight="700" fill={i===0?'white':'#193b2c'}>{i+1}</text></g>)}{merchant&&<g transform="translate(308 57)"><circle r="29" fill="#7b65bc25"/><circle r="10" fill="#6b4fb5" stroke="white" strokeWidth="4"/></g>}</svg>
+  <span className="gs-map-label"><Navigation size={12}/>{merchant?'Posição autorizada · exemplo':'3 paradas · exemplo'}</span>
+ </div>;
+}
+
+export function MerchantDashboard({compact=false}:{compact?:boolean}){
+ return <div className={'gs-dashboard'+(compact?' is-compact':'')}>
+  <div className="gs-dashboard-top"><span className="gs-mini-brand"><ArrowUpRight size={18}/> giro.</span><span><Store size={13}/> Comércio de exemplo</span></div>
+  <div className="gs-dashboard-heading"><div><span>VISÃO DO TURNO</span><h3>Cada motoboy. Cada acerto.</h3></div><span className="gs-status-dot">Equipe conectada</span></div>
+  <div className="gs-dashboard-stats"><div><span>Motoboys conectados</span><b>3</b></div><div><span>Saldo de taxas a pagar</span><b>R$ 54,50</b></div></div>
+  <DemoMap merchant/>
+  <div className="gs-team-table"><div className="gs-team-header"><span>Motoboy / entrega</span><span>Saldo a pagar</span></div>{[['A','Alex','Em rota','16,50'],['D','Dani','Aguardando retirada','20,00'],['R','Rafa','Concluída','18,00']].map(([initial,name,status,amount])=><div className="gs-team-row" key={name}><span className={'gs-avatar avatar-'+initial}>{initial}</span><div><b>{name}</b><small>{status}</small></div><strong>R$ {amount}</strong></div>)}</div>
+  <div className="gs-dashboard-foot"><ShieldCheck size={14}/> Só a última posição autorizada no turno.</div>
+ </div>;
+}
+
+export default function SalesHero({portal}:{portal:SalesAudience}){
+ if(portal==='merchant')return <figure className="gs-hero-scene merchant-scene" aria-label="Painel ilustrativo de comerciante com três motoboys e saldo de taxas de R$ 54,50. Todos os dados são fictícios."><div className="gs-stage-number" aria-hidden="true">NO<br/>CONTROLE.</div><MerchantDashboard compact/><div className="gs-scene-stamp"><Wallet size={19}/><span>Taxas de cada um.<br/><b>Acerto sem conta de cabeça.</b></span></div><figcaption>Interface ilustrativa · equipe, localização e valores fictícios.</figcaption></figure>;
+ return <figure className="gs-hero-scene rider-scene" aria-label="Celular ilustrativo com três entregas, rota e R$ 24,50 em taxas. Todos os dados são fictícios.">
+  <div className="gs-stage-number" aria-hidden="true">SEU<br/>CORRE.</div>
+  <div className="gs-receipt-float"><ReceiptText size={19}/><span>COMANDA #1042</span><div>Taxa de entrega<strong>R$ 8,00</strong></div><small><Check size={12}/> Conferida antes de salvar</small></div>
+  <div className="gs-phone"><div className="gs-phone-hardware"><span>17:42</span><i/><span>▰</span></div><div className="gs-phone-body"><div className="gs-phone-brand"><b>giro<span>.</span></b><span>MEU TURNO</span></div><div className="gs-phone-greeting">Bora, Alex <span>✦</span><h3>Seu corre, no controle.</h3></div><div className="gs-phone-balance"><span>Taxas de 3 entregas concluídas</span><strong>R$ 24<span>,50</span></strong><Wallet size={25}/></div><div className="gs-phone-map-title"><Route size={14}/> Próximas paradas <span>3</span></div><DemoMap/><div className="gs-phone-order"><span><MapPin size={17}/></span><div><small>PRÓXIMA ENTREGA · #1042</small><b>Rua das Flores, 120</b><small>Endereço de exemplo</small></div></div><div className="gs-phone-bottom"><Bike size={17}/><Route size={17}/><span><Camera size={20}/></span><Wallet size={17}/><Store size={17}/></div></div></div>
+  <div className="gs-scene-stamp"><span className="gs-cube"><Wallet size={25}/></span><span>Cada taxa no seu lugar.<br/><b>Seu fechamento também.</b></span></div>
+  <figcaption>Interface ilustrativa · endereços e valores fictícios.</figcaption>
+ </figure>;
 }
