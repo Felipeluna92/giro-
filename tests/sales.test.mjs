@@ -14,6 +14,23 @@ test('Analytics accepts only fixed funnel dimensions and excludes personal and c
  assert.deepEqual(safeEventProperties({plan:'admin',position:'unexpected',fee_cents:0,step:10}),{});
  assert.doesNotThrow(()=>trackGiro('begin_checkout',{plan:'rider'}));
 });
+test('Browser tracking respects privacy controls and never leaks unknown properties or query strings',()=>{
+ const originalWindow=Object.getOwnPropertyDescriptor(globalThis,'window');
+ const originalNavigator=Object.getOwnPropertyDescriptor(globalThis,'navigator');
+ const signals=[];const nav={doNotTrack:'0',globalPrivacyControl:false};
+ const win={location:{pathname:'/comprar',search:'?email=private&session_id=private'},dataLayer:[],dispatchEvent:e=>signals.push(e.detail)};
+ try{
+  Object.defineProperty(globalThis,'window',{value:win,configurable:true});Object.defineProperty(globalThis,'navigator',{value:nav,configurable:true});
+  trackGiro('begin_checkout',{plan:'rider',method:'pix',amount_cents:2990,email:'private',session_id:'private'});
+  assert.deepEqual(win.dataLayer,[{event:'giro_begin_checkout',page:'/comprar',plan:'rider',method:'pix',amount_cents:2990}]);
+  assert.equal(signals.length,1);
+  nav.globalPrivacyControl=true;trackGiro('cta_click',{plan:'rider'});assert.equal(win.dataLayer.length,1);
+  nav.globalPrivacyControl=false;nav.doNotTrack='1';trackGiro('cta_click',{plan:'rider'});assert.equal(win.dataLayer.length,1);
+ }finally{
+  if(originalWindow)Object.defineProperty(globalThis,'window',originalWindow);else delete globalThis.window;
+  if(originalNavigator)Object.defineProperty(globalThis,'navigator',originalNavigator);else delete globalThis.navigator;
+ }
+});
 test('Structured offers preserve all three checkout links, exact entry prices, and bundle renewal conditions',()=>{
  const graph=salesStructuredData()['@graph'];const products=graph.filter(x=>x['@type']==='Product');
  assert.deepEqual(products.map(x=>x.offers.price),['29.90','59.90','39.90']);

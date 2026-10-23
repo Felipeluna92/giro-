@@ -123,7 +123,7 @@ Sem prova social real, priorizar a demonstração. Não preencher os espaços co
 
 ### Verificação de implementação
 
-- [x] 46 testes automatizados aprovados na implementação, incluindo privacidade dos eventos e condições dos planos.
+- [x] 47 testes automatizados aprovados na implementação, incluindo privacidade dos eventos e condições dos planos.
 - [x] Build de produção e TypeScript aprovados na implementação.
 - [x] Texto e JSON-LD mantêm R$ 29,90 / R$ 59,90 / R$ 39,90 inicial / R$ 89,80 após a entrada.
 - [x] IA como sugestão com revisão; limite de 40 leituras/dia e 8 paradas.
@@ -131,17 +131,21 @@ Sem prova social real, priorizar a demonstração. Não preencher os espaços co
 - [x] Nenhum depoimento, avaliação, usuário, selo de cliente ou garantia inventado.
 - [x] As URLs de compra e login foram preservadas no código.
 - [x] Eventos são filtrados e não enviam dados pessoais ou query strings.
-- [ ] Conferir visual em 320, 390, 768 e desktop no navegador publicado.
-- [ ] Conferir as duas jornadas da demo, seletor e calculadora por teclado.
-- [ ] Conferir barra mobile visível fora do hero e oculta diante dos planos.
-- [ ] Conferir botões, foco visível, leitura, contraste e ausência de rolagem horizontal.
-- [ ] Conferir metadata, imagem OG, dez respostas e schema no HTML publicado.
-- [ ] Conferir compra pública e abertura do checkout com cartão/Pix, sem pagamento real.
+- [x] Conferir visual em 320, 390, 768 e desktop no navegador publicado.
+- [x] Conferir as duas jornadas da demo, seletor e calculadora por teclado.
+- [x] Conferir barra mobile visível fora do hero e oculta diante dos planos.
+- [x] Conferir botões, foco visível, leitura, contraste e ausência de rolagem horizontal.
+- [x] Conferir metadata, imagem OG, dez respostas e schema no HTML publicado.
+- [x] Conferir compra pública e abertura do checkout com cartão/Pix, sem pagamento real.
 - [ ] Conectar destino de analytics e conferir recebimento antes de usar relatórios ou iniciar testes A/B.
 - [ ] Substituir placeholders legais e confirmar o canal oficial antes de ampliar tráfego pago.
 - [ ] Medir LCP/CLS/INP em laboratório mobile e campo; ainda sem dados de campo.
 
-Os itens de navegador serão atualizados após a publicação verificada. Aprovação de testes de código não substitui esses itens.
+Evidência de navegador em 23/10/2026: páginas publicadas verificadas no Chrome em desktop e em viewport de 320/390/768 px. As duas demos concluíram em três ações; os resultados fictícios foram R$ 24,50 de taxas para Motoboy e R$ 16,50 de saldo de Alex para Comerciante. A calculadora respondeu a Home/End (R$ 3,00 / R$ 20,00); a FAQ abriu por Enter. Barra mobile verificada com destino do público escolhido e removida diante dos planos. Nenhum corte de links ou títulos observado nos viewports testados.
+
+Valores e URLs dos três formulários conferidos. O CTA do hero levou à compra pública, sem login. O checkout Stripe abriu para cartão (R$ 29,90/mês) e Pix (R$ 29,90 por 30 dias), sem pagamento realizado. A entrada `?publico=comerciante` exibiu o perfil correto. Metadata, três ofertas em BRL e dez perguntas do JSON-LD foram conferidas no DOM; imagem OG PNG 1200×630 renderizada.
+
+Contrastes calculados para a paleta principal: texto secundário 6,16:1, destaque verde 5,30:1, CTA verde claro 9,94:1 e botão escuro com texto branco 12,21:1. Isso cobre esses pares; não equivale a uma certificação completa de acessibilidade. A checagem em viewport não substitui testes físicos em Android/iOS, leitor de tela ou auditoria WCAG completa. LCP/CLS/INP de campo ainda não foram medidos.
 
 ## 6. Plano de testes A/B prioritários
 

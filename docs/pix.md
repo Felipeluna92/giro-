@@ -10,7 +10,7 @@ Novos compradores recebem o convite para definir senha. Contas existentes mantê
 
 ## Ativação na Stripe
 
-O Pix da conta de produção estava indisponível (`pix.available: false`, preferência `off`) na consulta de implantação. Não foi habilitado por inferência. O conector desta sessão só expõe consulta das configurações de formas de pagamento; o painel exige autenticação.
+Na implantação inicial, Pix estava indisponível na conta de produção e foi mantido desativado. Em 23/10/2026, a configuração padrão da própria conta foi consultada novamente: ativa, `pix.available: true` e preferência efetiva `on`. O ID verificado foi salvo no registro privado de configuração do Giro.
 
 Depois de ativar Pix no Dashboard, consultar novamente `payment_method_configurations` na conta de produção configurada em `lib/stripe-catalog.ts`. Confirmar configuração ativa da própria conta (`application: null`), Pix disponível e preferência efetiva `on`. Somente então salvar o ID dessa configuração em `giro_private.payment_options.pix_configuration_id`. Não salvar chaves de API ou credenciais nessa tabela. Esse ID registra a ativação verificada da configuração padrão da própria conta. O Checkout usa `allowed_payment_method_types: ['pix']`, um filtro dinâmico que impede cartão, boleto e outros métodos no fluxo Pix, sem combinar configurações e exclusões incompatíveis.
 
@@ -18,6 +18,6 @@ Enquanto o ID não estiver configurado, a compra informa que Pix está indispon�
 
 ## Validação
 
-`npm test` (41 testes) e `npm run build` passaram. `supabase/verify-pix.sql` testa créditos de 30 dias, renovação antecipada, duplicatas, promoção única, incompatibilidade de cliente e comprador, isolamento de visitantes, reembolso anterior a uma renovação, contestação e restauração, além das permissões. Todos os dados de teste ficam em transação com rollback. Não executar esse arquivo sem manter o rollback.
+`npm test` e `npm run build` passaram, incluindo a cobertura de pagamentos Pix. `supabase/verify-pix.sql` testa créditos de 30 dias, renovação antecipada, duplicatas, promoção única, incompatibilidade de cliente e comprador, isolamento de visitantes, reembolso anterior a uma renovação, contestação e restauração, além das permissões. Todos os dados de teste ficam em transação com rollback. Não executar esse arquivo sem manter o rollback.
 
-Ainda é necessário ativar a forma de pagamento na Stripe e testar a geração de um QR Code no checkout de produção. Não foi efetuado pagamento real por Pix nesta validação.
+Em 23/10/2026, a compra pública abriu o checkout de produção com Pix como único método. O QR Code e o Pix Copia e Cola foram gerados, com validade de 30 minutos, sem efetuar pagamento real. Após o redesign da página de vendas, a abertura dos checkouts de cartão e Pix foi verificada novamente. A confirmação de uma compra Pix real e a entrega de acesso após esse pagamento não foram executadas neste teste.
