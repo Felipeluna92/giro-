@@ -1,0 +1,7 @@
+import {ImageResponse} from 'next/og';
+export const alt='Giro — entregas e taxas no controle. Motoboy R$ 29,90/mês e Comerciante R$ 59,90/mês.';
+export const size={width:1200,height:630};
+export const contentType='image/png';
+export default function Image(){
+ return new ImageResponse(<div style={{display:'flex',width:'100%',height:'100%',background:'#fafbf6',padding:'58px 65px',flexDirection:'column',color:'#193c2c',fontFamily:'sans-serif'}}><div style={{display:'flex',alignItems:'center',gap:13}}><div style={{display:'flex',width:51,height:51,borderRadius:14,background:'#c8f477',alignItems:'center',justifyContent:'center',fontSize:39}}>↗</div><span style={{fontSize:53,fontWeight:800,letterSpacing:-3}}>giro.</span><span style={{marginLeft:'auto',fontSize:17,color:'#526347'}}>PARA QUEM FAZ O CORRE.</span></div><div style={{display:'flex',flexDirection:'column',marginTop:48,fontSize:76,fontWeight:800,letterSpacing:-3,lineHeight:1.1}}><span>Cada entrega conta.</span><span style={{color:'#4b7339'}}>Cada taxa também.</span></div><div style={{display:'flex',gap:20,marginTop:38,fontSize:22}}><span style={{display:'flex',padding:'15px 23px',borderRadius:12,background:'#eaf1df'}}>Motoboy · R$ 29,90/mês</span><span style={{display:'flex',padding:'15px 23px',borderRadius:12,background:'#193c2c',color:'#fff'}}>Comerciante · R$ 59,90/mês</span></div><div style={{display:'flex',fontSize:17,color:'#526347',marginTop:'auto'}}>Pacote: R$ 39,90 no primeiro mês. Depois, R$ 89,80/mês.</div></div>,size);
+}
