@@ -10,7 +10,9 @@ A tabela privada `purchase_checkouts` guarda as reservas e os vínculos de pagam
 
 Antes de liberar o checkout público, verificar no Supabase o SMTP personalizado para envio a compradores externos, o remetente e as URLs permitidas de redirecionamento. Incluir `https://giro-beryl.vercel.app/auth/callback` e `https://giro-beryl.vercel.app/auth/callback?next=/definir-senha`, conforme a configuração de URLs do projeto. Verificar a entrega do convite e da recuperação e testar o link em outro navegador.
 
-O SMTP não foi confirmado: o Dashboard solicitou CAPTCHA durante o login. A versão fica em uma branch de revisão até essa verificação. Nenhuma cobrança real foi feita nesta validação.
+O SMTP personalizado da Brevo foi configurado. O teste real de recuperação retornou HTTP 200 no Supabase e o provedor confirmou o evento `Entregue` após a correção do remetente para um endereço verificado. A Brevo substitui o endereço Gmail pelo seu domínio de envio neste modo. Não basta considerar o retorno HTTP: conferir o evento de entrega no provedor.
+
+As URLs de callback e de definição de senha foram permitidas no Supabase. O envio de recuperação foi validado; o convite de um comprador novo após uma cobrança real e a alteração de senha pelo destinatário não foram executados nesta validação. Nenhuma cobrança real foi feita.
 
 ## Validação
 
