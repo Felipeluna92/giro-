@@ -4,6 +4,8 @@ import {stripeClient,stripeRpc} from './stripe-server';
 import {invoiceSubscription,invoicePeriod,invoiceIsPaid,stripeObjectId,subscriptionPlan} from './stripe-events';
 import {fulfillPublicPurchase} from './purchase-server';
 import {STRIPE_PLANS} from './stripe-catalog';
+import {syncPixPayment} from './pix-server';
+import {pixEventCanConfirm} from './pix-policy';
 
 type InvoiceRecord={id:string;period_end:string;paid:boolean;amount_paid:number;refunded?:boolean;disputed?:boolean};
 const date=(seconds:number|null|undefined)=>seconds?new Date(seconds*1000).toISOString():null;
@@ -59,6 +61,7 @@ export async function processStripeEvent(event:Stripe.Event){
  const objectId=object.id;
  if(event.type.startsWith('checkout.session.')){
   const session=await stripe.checkout.sessions.retrieve(objectId);
+  if(session.mode==='payment'){if(pixEventCanConfirm(event.type,'payment_status' in object?object.payment_status:null))await syncPixPayment(event,{session:session.id});return;}
   if(session.mode!=='subscription'||session.payment_status!=='paid')return;
   const id=stripeObjectId(session.subscription);if(id)await syncSubscription(event,id);return;
  }
@@ -78,6 +81,7 @@ export async function processStripeEvent(event:Stripe.Event){
    if(!intentId){const charge=await stripe.charges.retrieve(stripeObjectId(dispute.charge)!);intentId=stripeObjectId(charge.payment_intent);}
   }
   if(!intentId)return;
+  await syncPixPayment(event,{intent:intentId});
   const invoices=new Set<string>();
   for await(const payment of stripe.invoicePayments.list({payment:{type:'payment_intent',payment_intent:intentId},status:'paid',limit:100})){
    const id=stripeObjectId(payment.invoice);if(id)invoices.add(id);

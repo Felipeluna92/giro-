@@ -1,0 +1,41 @@
+-- Transactional fixtures: no account, payment, entitlement or configuration persists.
+begin;
+do $$
+declare buyer text:='pix-'||gen_random_uuid()::text||'@example.test'; uid uuid:=gen_random_uuid(); other_uid uuid:=gen_random_uuid(); a jsonb; b jsonb; c jsonb; f jsonb; final_until timestamptz; paid_at timestamptz:=now()-interval '1 minute'; customer1 text:='cus_Pix'||replace(gen_random_uuid()::text,'-','');customer2 text:='cus_Pix'||replace(gen_random_uuid()::text,'-','');s1 text:='cs_pix_'||replace(gen_random_uuid()::text,'-','');s2 text:='cs_pix_'||replace(gen_random_uuid()::text,'-','');pi1 text:='pi_Pix'||replace(gen_random_uuid()::text,'-','');pi2 text:='pi_Pix'||replace(gen_random_uuid()::text,'-','');
+begin
+ a:=public.purchase_reserve_v2(repeat('d',64),buyer,'combo','pix');
+ if (a->>'first_price_cents')::int<>3990 then raise exception 'Pix intro price incorrect';end if;
+ if public.purchase_buyer(buyer) is not null then raise exception 'Account exists before payment';end if;
+ perform public.purchase_finish((a->>'id')::uuid,(a->>'lease')::uuid,customer1,s1);
+ if (public.purchase_status(repeat('d',64),s1)->>'paid')::boolean then raise exception 'Unpaid Pix grants access';end if;
+ if public.purchase_status(repeat('e',64),s1) is not null then raise exception 'Another visitor can read Pix purchase';end if;
+ begin perform public.pix_payment_begin(s1,'cus_Wrong',pi1,paid_at,false,false,now());raise exception 'Customer mismatch accepted';exception when check_violation then null;end;
+ f:=public.pix_payment_begin(s1,customer1,pi1,paid_at,false,false,now());
+ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data,raw_user_meta_data) values(uid,buyer,now(),'{}','{}'),(other_uid,'other-'||other_uid::text||'@example.test',now(),'{}','{}');
+ begin perform public.pix_payment_finish((a->>'id')::uuid,(f->>'fulfillment_lease')::uuid,other_uid);raise exception 'Wrong buyer accepted';exception when insufficient_privilege then null;end;
+ perform public.pix_payment_finish((a->>'id')::uuid,(f->>'fulfillment_lease')::uuid,uid);
+ final_until:=(public.pix_access_summary(uid)->0->>'paidUntil')::timestamptz;
+ if final_until<>paid_at+interval '30 days' then raise exception 'Initial Pix period incorrect';end if;
+ if not (public.pix_payment_begin(s1,customer1,pi1,paid_at,false,false,now())->>'done')::boolean then raise exception 'Duplicate email not suppressed';end if;
+ if (public.pix_access_summary(uid)->0->>'paidUntil')::timestamptz<>final_until then raise exception 'Duplicate webhook extended access';end if;
+ if public.pix_has_overlap(buyer,'combo') then raise exception 'Pix renewal blocked';end if;
+ if not public.pix_has_overlap(buyer,'merchant') or not public.purchase_has_overlap(buyer,'combo') then raise exception 'Overlapping purchase not blocked';end if;
+ b:=public.purchase_reserve_v2(repeat('e',64),buyer,'combo','pix');
+ if (b->>'first_price_cents')::int<>8980 then raise exception 'Pix introduction used twice';end if;
+ perform public.purchase_finish((b->>'id')::uuid,(b->>'lease')::uuid,customer2,s2);
+ f:=public.pix_payment_begin(s2,customer2,pi2,paid_at+interval '1 second',false,false,now());
+ perform public.pix_payment_finish((b->>'id')::uuid,(f->>'fulfillment_lease')::uuid,uid);
+ if (public.pix_access_summary(uid)->0->>'paidUntil')::timestamptz<>final_until+interval '30 days' then raise exception 'Renewal lost prepaid days';end if;
+ perform public.pix_payment_begin(s1,customer1,pi1,paid_at,true,false,now());
+ if exists(select 1 from giro_private.subscriptions where sale_id='pix:'||(a->>'id') and status<>'refunded') then raise exception 'Refund left order active';end if;
+ if (public.pix_access_summary(uid)->0->>'paidUntil')::timestamptz<>paid_at+interval '1 second'+interval '30 days' then raise exception 'Refund left refunded credit on a later renewal';end if;
+ perform public.pix_payment_begin(s2,customer2,pi2,paid_at+interval '1 second',false,true,now());
+ if public.pix_access_summary(uid)<>'[]'::jsonb then raise exception 'Disputed credit remains active';end if;
+ perform public.pix_payment_begin(s2,customer2,pi2,paid_at+interval '1 second',false,false,now()+interval '1 second');
+ if jsonb_array_length(public.pix_access_summary(uid))<>1 then raise exception 'Won dispute failed to restore paid period';end if;
+ perform public.pix_payment_begin(s2,customer2,pi2,paid_at+interval '1 second',false,true,now()-interval '1 second');
+ if jsonb_array_length(public.pix_access_summary(uid))<>1 then raise exception 'Old dispute overwrote newer state';end if;
+ if public.pix_access_summary(other_uid)<>'[]'::jsonb then raise exception 'Another user can renew owner access';end if;
+ if exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('purchase_reserve_v2','pix_configuration','pix_order','pix_has_overlap','pix_payment_begin','pix_payment_finish','pix_access_summary') and (has_function_privilege('anon',p.oid,'execute') or has_function_privilege('authenticated',p.oid,'execute'))) then raise exception 'Backend-only Pix function exposed';end if;
+end $$;
+rollback;
