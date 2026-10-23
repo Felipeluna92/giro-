@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {portalBody,portalResponse,portalSession} from '../../../../lib/portal-api';
 import {adminAccountAction,adminAccountQuery} from '../../../../lib/admin-accounts-policy';
 import {billingClient} from '../../../../lib/billing-server';
@@ -22,7 +23,7 @@ export async function POST(request:Request){
  const action=adminAccountAction(await portalBody(request));if(!action)return portalResponse({error:'Confira os dados. O teste deve durar de 1 a 30 dias.'},400);
  const actor=session.user.userId;
  try{
-  const allowed=await stripeRpc<boolean>('claim_login_attempt',{p_key:'admin-accounts:'+actor,p_limit:20});
+  const allowed=await stripeRpc<boolean>('claim_login_attempt',{p_key:createHash('sha256').update('giro-admin-accounts:'+actor).digest('hex'),p_limit:20});
   if(!allowed)return portalResponse({error:'Muitas ações seguidas. Aguarde alguns minutos.'},429);
   if(action.action==='trial'){
    const buyer=await stripeRpc<PurchaseBuyer|null>('purchase_buyer',{p_email:action.email});

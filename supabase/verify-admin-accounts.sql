@@ -6,9 +6,12 @@ insert into giro_private.administrators select admin from admin_fixture;
 insert into giro_private.subscriptions(sale_id,portal,owner_id,buyer_email,status,paid_until,last_event_at) select 'admin-fixture-'||paid,'rider',paid,paid::text||'@admin-fixture.invalid','active',now()+interval '30 days',now() from admin_fixture;
 set local role service_role;
 do $$
-declare f admin_fixture; d jsonb; denied boolean;
+declare f admin_fixture; d jsonb; denied boolean; i integer; rate_key text;
 begin
  select * into f from admin_fixture;
+ rate_key:=repeat(md5('admin-fixture:'||f.admin::text),2);
+ for i in 1..20 loop if not public.claim_login_attempt(rate_key,20) then raise exception 'Valid admin action throttled too early';end if;end loop;
+ if public.claim_login_attempt(rate_key,20) then raise exception 'Admin action throttle failed';end if;
  denied:=false;begin perform public.admin_accounts(f.other);exception when insufficient_privilege then denied:=true;end;if not denied then raise exception 'Non-admin could list accounts';end if;
  perform public.admin_trial_change(f.admin,f.rider,'rider',7);
  if not exists(select 1 from giro_private.account_trials where user_id=f.rider and expires_at=now()+interval '7 days') then raise exception 'Trial not created with correct duration';end if;
