@@ -1,11 +1,15 @@
 import {notFound,redirect} from 'next/navigation';
+import type {Metadata} from 'next';
 import {getRiderUser} from '../../lib/auth';
-import {stripeRpc,stripeConfigured} from '../../lib/stripe-server';
-import AdminBilling from './settings';
+import {stripeRpc} from '../../lib/stripe-server';
+import type {AdminAccountData} from '../../lib/admin-accounts-policy';
+import AdminAccounts from './accounts';
+import './admin.css';
 export const dynamic='force-dynamic';
+export const metadata:Metadata={title:'Administração · Giro',robots:{index:false,follow:false}};
 export default async function Admin(){
  const user=await getRiderUser();if(!user)redirect('/entrar');if(!user.access.isAdmin)notFound();
- let databaseReady=false,lastEventAt:string|null=null;
- try{const status=await stripeRpc<{lastEventAt:string|null}>('stripe_billing_status');databaseReady=true;lastEventAt=status.lastEventAt;}catch{console.error('giro_stripe_database_unavailable');}
- return <AdminBilling ready={stripeConfigured()&&databaseReady} keyConfigured={!!process.env.STRIPE_SECRET_KEY} webhookConfigured={!!process.env.STRIPE_WEBHOOK_SECRET} databaseReady={databaseReady} lastEventAt={lastEventAt}/>;
+ let initial:AdminAccountData|null=null;
+ try{initial=await stripeRpc<AdminAccountData>('admin_accounts',{p_actor:user.userId});}catch{console.error('giro_admin_accounts_unavailable');}
+ return <AdminAccounts initial={initial}/>;
 }
