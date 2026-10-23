@@ -5,6 +5,7 @@ import {PURCHASE_COOKIE,purchaseVisitor,purchaseRateKey,createPublicPurchase} fr
 import {purchaseEmail,purchasePlan} from '../../../lib/purchase-policy';
 import {purchaseMethod} from '../../../lib/pix-policy';
 import {pixConfiguration} from '../../../lib/pix-server';
+import {checkoutDiagnostic} from '../../../lib/checkout-diagnostic';
 export const runtime='nodejs';
 export const maxDuration=60;
 export async function POST(request:Request){
@@ -23,5 +24,5 @@ export async function POST(request:Request){
   const config=method==='pix'?await pixConfiguration():null;
   if(method==='pix'&&!config)return portalResponse({error:'O pagamento por Pix está indisponível no momento. Escolha cartão ou tente novamente mais tarde.'},503);
   return portalResponse(await createPublicPurchase(visitor.hash,email,plan,price,method,config??undefined));
- }catch(error){const code=error instanceof Error?error.message:'';console.error('giro_public_checkout_failed',{code:['CHECKOUT_BUSY','PRICE_MISMATCH','PURCHASE_SESSION_EXPIRED'].includes(code)?code:'processing_failed'});return portalResponse({error:code==='CHECKOUT_BUSY'?'Seu pagamento está sendo preparado. Aguarde alguns segundos e tente novamente.':code==='PURCHASE_SESSION_EXPIRED'?'Este checkout expirou. Aguarde alguns minutos e abra uma nova compra.':'Não foi possível abrir o pagamento. Tente novamente em instantes.'},503);}
+ }catch(error){const code=error instanceof Error?error.message:'',diagnostic=checkoutDiagnostic(error);console.error('giro_public_checkout_failed',{checkoutCode:['CHECKOUT_BUSY','PRICE_MISMATCH','PURCHASE_SESSION_EXPIRED'].includes(code)?code:'processing_failed',...diagnostic});return portalResponse({diagnostic,error:code==='CHECKOUT_BUSY'?'Seu pagamento está sendo preparado. Aguarde alguns segundos e tente novamente.':code==='PURCHASE_SESSION_EXPIRED'?'Este checkout expirou. Aguarde alguns minutos e abra uma nova compra.':'Não foi possível abrir o pagamento. Tente novamente em instantes.'},503);}
 }
