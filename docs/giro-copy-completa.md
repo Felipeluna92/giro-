@@ -187,7 +187,7 @@ Veja o que está aguardando retirada, em rota ou concluído. Na hora do acerto, 
 
 - **Equipe conectada por convite aceito.** Cada motoboy escolhe o vínculo.
 - **Última localização autorizada no turno.** O motoboy decide compartilhar.
-- **Taxas e saldo separados por motoboy.** Dinheiro do pedido fica em outra conta.
+- **Taxas e saldo separados por motoboy.** O valor dos pedidos aparece separado.
 
 CTA: **Quero controlar meu delivery** → /comprar?plano=merchant.
 
